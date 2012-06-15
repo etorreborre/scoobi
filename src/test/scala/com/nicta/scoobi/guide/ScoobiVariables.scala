@@ -6,11 +6,12 @@ import com.nicta.scoobi.impl.control.Exceptions._
 trait ScoobiVariables {
 
   lazy val version = versionLine.flatMap(extractVersion).getOrElse("version not found")
-  lazy val previousVersionIfSnapshot =
+  lazy val previousVersionIfSnapshot = "SCOOBI-" + (
     if (isSnapshot) {
-      val major :: minor :: patch :: _ = version.split("\\.").toList
+      val major :: minor :: patch :: _ = version.replace("-SNAPSHOT", "").split("\\.").toList
       Seq(major, minor.toInt-1, patch).mkString(".")
     } else version
+  )
 
   lazy val isSnapshot = version endsWith "SNAPSHOT"
 
@@ -46,7 +47,7 @@ trait ScoobiVariables {
           "API_PAGE"            -> apiPage,
           "API_OFFICIAL_PAGE"   -> apiOfficialPage,
           "API_SNAPSHOT_PAGE"   -> apiSnapshotPage,
-          "BRANCH"              -> branch,
+          "OFFICIAL_TAG"        -> previousVersionIfSnapshot,
           "GUIDE"               -> guideDir,
           "GUIDE_OFFICIAL"      -> guideOfficialDir,
           "GUIDE_SNAPSHOT"      -> guideSnapshotDir,

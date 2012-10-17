@@ -24,11 +24,11 @@ import io.DataSink
 import impl.plan._
 import impl.exec._
 import Smart._
-import org.apache.hadoop.io.compress.{GzipCodec, CompressionCodec}
+import org.apache.hadoop.io.compress.{ GzipCodec, CompressionCodec }
 import org.apache.hadoop.io.SequenceFile.CompressionType
-import scalaz.{Scalaz, State}
+import scalaz.{ Scalaz, State }
 import Scalaz._
-
+import Mode._
 
 object Eval {
   type HadoopST = (ExecState, Map[Smart.DComp[_, _ <: Shape], AST.Node[_, _ <: Shape]])
@@ -39,9 +39,10 @@ object Eval {
   case class Vector(st: VectorST) extends ST
 }
 
-
-/** Type class for things that can be persisted. Mechanism to allow tuples of DLists and
-  * DObjects to be persisted. */
+/**
+ * Type class for things that can be persisted. Mechanism to allow tuples of DLists and
+ * DObjects to be persisted.
+ */
 trait Persister[In] {
   type Out
   def apply(in: In, conf: ScoobiConfiguration): Out
@@ -52,8 +53,10 @@ trait Persister[In] {
 object Persister extends LowImplicitsPersister {
   lazy val logger = LogFactory.getLog("scoobi.Persister")
 
-  /** Evaluate and persist a distributed computation. This can be a combination of one or more
-   * DLists (i.e. DListPersisters) and DObjects. */
+  /**
+   * Evaluate and persist a distributed computation. This can be a combination of one or more
+   * DLists (i.e. DListPersisters) and DObjects.
+   */
   def persist[P](p: P)(implicit conf: ScoobiConfiguration, persister: Persister[P]): persister.Out = persister(p, conf)
 
   implicit def sequencePersister[T](implicit pfn: PFn[T]): Persister[Seq[T]] = new Persister[Seq[T]] {
@@ -76,9 +79,8 @@ object Persister extends LowImplicitsPersister {
     }
   }
 
-  implicit def tuple2persister[T1, T2]
-    (implicit pfn1: PFn[T1],
-              pfn2: PFn[T2]) = new Persister[(T1, T2)] {
+  implicit def tuple2persister[T1, T2](implicit pfn1: PFn[T1],
+    pfn2: PFn[T2]) = new Persister[(T1, T2)] {
 
     type Out = (pfn1.Ret, pfn2.Ret)
 
@@ -92,10 +94,9 @@ object Persister extends LowImplicitsPersister {
     }
   }
 
-  implicit def tuple3persister[T1, T2, T3]
-    (implicit pfn1: PFn[T1],
-              pfn2: PFn[T2],
-              pfn3: PFn[T3]) = new Persister[(T1, T2, T3)] {
+  implicit def tuple3persister[T1, T2, T3](implicit pfn1: PFn[T1],
+    pfn2: PFn[T2],
+    pfn3: PFn[T3]) = new Persister[(T1, T2, T3)] {
 
     type Out = (pfn1.Ret, pfn2.Ret, pfn3.Ret)
 
@@ -110,11 +111,10 @@ object Persister extends LowImplicitsPersister {
     }
   }
 
-  implicit def tuple4persister[T1, T2, T3, T4]
-    (implicit pfn1: PFn[T1],
-              pfn2: PFn[T2],
-              pfn3: PFn[T3],
-              pfn4: PFn[T4]) = new Persister[(T1, T2, T3, T4)] {
+  implicit def tuple4persister[T1, T2, T3, T4](implicit pfn1: PFn[T1],
+    pfn2: PFn[T2],
+    pfn3: PFn[T3],
+    pfn4: PFn[T4]) = new Persister[(T1, T2, T3, T4)] {
 
     type Out = (pfn1.Ret, pfn2.Ret, pfn3.Ret, pfn4.Ret)
 
@@ -130,12 +130,11 @@ object Persister extends LowImplicitsPersister {
     }
   }
 
-  implicit def tuple5persister[T1, T2, T3, T4, T5]
-    (implicit pfn1: PFn[T1],
-              pfn2: PFn[T2],
-              pfn3: PFn[T3],
-              pfn4: PFn[T4],
-              pfn5: PFn[T5]) = new Persister[(T1, T2, T3, T4, T5)] {
+  implicit def tuple5persister[T1, T2, T3, T4, T5](implicit pfn1: PFn[T1],
+    pfn2: PFn[T2],
+    pfn3: PFn[T3],
+    pfn4: PFn[T4],
+    pfn5: PFn[T5]) = new Persister[(T1, T2, T3, T4, T5)] {
 
     type Out = (pfn1.Ret, pfn2.Ret, pfn3.Ret, pfn4.Ret, pfn5.Ret)
 
@@ -152,13 +151,12 @@ object Persister extends LowImplicitsPersister {
     }
   }
 
-  implicit def tuple6persister[T1, T2, T3, T4, T5, T6]
-    (implicit pfn1: PFn[T1],
-              pfn2: PFn[T2],
-              pfn3: PFn[T3],
-              pfn4: PFn[T4],
-              pfn5: PFn[T5],
-              pfn6: PFn[T6]) = new Persister[(T1, T2, T3, T4, T5, T6)] {
+  implicit def tuple6persister[T1, T2, T3, T4, T5, T6](implicit pfn1: PFn[T1],
+    pfn2: PFn[T2],
+    pfn3: PFn[T3],
+    pfn4: PFn[T4],
+    pfn5: PFn[T5],
+    pfn6: PFn[T6]) = new Persister[(T1, T2, T3, T4, T5, T6)] {
 
     type Out = (pfn1.Ret, pfn2.Ret, pfn3.Ret, pfn4.Ret, pfn5.Ret, pfn6.Ret)
 
@@ -176,14 +174,13 @@ object Persister extends LowImplicitsPersister {
     }
   }
 
-  implicit def tuple7persister[T1, T2, T3, T4, T5, T6, T7]
-    (implicit pfn1: PFn[T1],
-              pfn2: PFn[T2],
-              pfn3: PFn[T3],
-              pfn4: PFn[T4],
-              pfn5: PFn[T5],
-              pfn6: PFn[T6],
-              pfn7: PFn[T7]) = new Persister[(T1, T2, T3, T4, T5, T6, T7)] {
+  implicit def tuple7persister[T1, T2, T3, T4, T5, T6, T7](implicit pfn1: PFn[T1],
+    pfn2: PFn[T2],
+    pfn3: PFn[T3],
+    pfn4: PFn[T4],
+    pfn5: PFn[T5],
+    pfn6: PFn[T6],
+    pfn7: PFn[T7]) = new Persister[(T1, T2, T3, T4, T5, T6, T7)] {
 
     type Out = (pfn1.Ret, pfn2.Ret, pfn3.Ret, pfn4.Ret, pfn5.Ret, pfn6.Ret, pfn7.Ret)
 
@@ -202,15 +199,14 @@ object Persister extends LowImplicitsPersister {
     }
   }
 
-  implicit def tuple8persister[T1, T2, T3, T4, T5, T6, T7, T8]
-    (implicit pfn1: PFn[T1],
-              pfn2: PFn[T2],
-              pfn3: PFn[T3],
-              pfn4: PFn[T4],
-              pfn5: PFn[T5],
-              pfn6: PFn[T6],
-              pfn7: PFn[T7],
-              pfn8: PFn[T8]) = new Persister[(T1, T2, T3, T4, T5, T6, T7, T8)] {
+  implicit def tuple8persister[T1, T2, T3, T4, T5, T6, T7, T8](implicit pfn1: PFn[T1],
+    pfn2: PFn[T2],
+    pfn3: PFn[T3],
+    pfn4: PFn[T4],
+    pfn5: PFn[T5],
+    pfn6: PFn[T6],
+    pfn7: PFn[T7],
+    pfn8: PFn[T8]) = new Persister[(T1, T2, T3, T4, T5, T6, T7, T8)] {
 
     type Out = (pfn1.Ret, pfn2.Ret, pfn3.Ret, pfn4.Ret, pfn5.Ret, pfn6.Ret, pfn7.Ret, pfn8.Ret)
 
@@ -230,34 +226,32 @@ object Persister extends LowImplicitsPersister {
     }
   }
 
-
-  private def sources(outputs: List[Smart.DComp[_, _ <: Shape]]): List[DataSource[_,_,_]] = {
+  private def sources(outputs: List[Smart.DComp[_, _ <: Shape]]): List[DataSource[_, _, _]] = {
     import Smart._
     def addLoads(set: Set[Load[_]], comp: DComp[_, _ <: Shape]): Set[Load[_]] = comp match {
-      case ld@Load(_)                   => set + ld
+      case ld @ Load(_) => set + ld
       case ParallelDo(in, env, _, _, _) => { val s1 = addLoads(set, in); addLoads(s1, env) }
-      case GroupByKey(in)               => addLoads(set, in)
-      case Combine(in, _)               => addLoads(set, in)
-      case Flatten(ins)                 => ins.foldLeft(set) { case (s, in) => addLoads(s, in) }
-      case Materialize(in)              => addLoads(set, in)
-      case Op(in1, in2, f)              => { val s1 = addLoads(set, in1); addLoads(s1, in2) }
-      case Return(_)                    => set
+      case GroupByKey(in) => addLoads(set, in)
+      case Combine(in, _) => addLoads(set, in)
+      case Flatten(ins) => ins.foldLeft(set) { case (s, in) => addLoads(s, in) }
+      case Materialize(in) => addLoads(set, in)
+      case Op(in1, in2, f) => { val s1 = addLoads(set, in1); addLoads(s1, in2) }
+      case Return(_) => set
     }
 
     val loads = outputs.foldLeft(Set.empty: Set[Load[_]]) { case (set, output) => addLoads(set, output) }
     loads.toList.map(_.source)
   }
 
-  private def prepareST(outputs: List[(Smart.DComp[_, _ <: Shape], Option[DataSink[_,_,_]])], conf: ScoobiConfiguration): Eval.ST = {
+  private def prepareST(outputs: List[(Smart.DComp[_, _ <: Shape], Option[DataSink[_, _, _]])], conf: ScoobiConfiguration): Eval.ST = {
     /* Check inputs + outputs. */
     sources(outputs.map(_._1)) foreach { _.inputCheck(conf) }
     outputs collect { case (_, Some(sink)) => sink } foreach { _.outputCheck(conf) }
 
     /* Performing any up-front planning before execution. */
-    if (conf.mode) VectorMode.prepareST(outputs, conf) else HadoopMode.prepareST(outputs, conf)
+    if (conf.isInMemory) VectorMode.prepareST(outputs, conf) else HadoopMode.prepareST(outputs, conf)
   }
 }
-
 
 /**
  * Those additional implicits allow to pass tuples of persisters to persist at once with the persist method
@@ -265,55 +259,54 @@ object Persister extends LowImplicitsPersister {
  */
 trait LowImplicitsPersister {
 
-  implicit def tuple2persisters[T1, T2]  (implicit p1: Persister[T1], p2: Persister[T2]) =
+  implicit def tuple2persisters[T1, T2](implicit p1: Persister[T1], p2: Persister[T2]) =
     new Persister[(T1, T2)] {
       type Out = (p1.Out, p2.Out)
       def apply(x: (T1, T2), conf: ScoobiConfiguration) =
         (p1.apply(x._1, conf), p2.apply(x._2, conf))
     }
 
-  implicit def tuple3persisters[T1, T2, T3]  (implicit p1: Persister[T1], p2: Persister[T2], p3: Persister[T3]) =
+  implicit def tuple3persisters[T1, T2, T3](implicit p1: Persister[T1], p2: Persister[T2], p3: Persister[T3]) =
     new Persister[(T1, T2, T3)] {
       type Out = (p1.Out, p2.Out, p3.Out)
       def apply(x: (T1, T2, T3), conf: ScoobiConfiguration) =
         (p1.apply(x._1, conf), p2.apply(x._2, conf), p3.apply(x._3, conf))
     }
 
-  implicit def tuple4persisters[T1, T2, T3, T4]  (implicit p1: Persister[T1], p2: Persister[T2], p3: Persister[T3], p4: Persister[T4]) =
+  implicit def tuple4persisters[T1, T2, T3, T4](implicit p1: Persister[T1], p2: Persister[T2], p3: Persister[T3], p4: Persister[T4]) =
     new Persister[(T1, T2, T3, T4)] {
       type Out = (p1.Out, p2.Out, p3.Out, p4.Out)
       def apply(x: (T1, T2, T3, T4), conf: ScoobiConfiguration) =
         (p1.apply(x._1, conf), p2.apply(x._2, conf), p3.apply(x._3, conf), p4.apply(x._4, conf))
     }
 
-  implicit def tuple5persisters[T1, T2, T3, T4, T5]  (implicit p1: Persister[T1], p2: Persister[T2], p3: Persister[T3], p4: Persister[T4], p5: Persister[T5]) =
+  implicit def tuple5persisters[T1, T2, T3, T4, T5](implicit p1: Persister[T1], p2: Persister[T2], p3: Persister[T3], p4: Persister[T4], p5: Persister[T5]) =
     new Persister[(T1, T2, T3, T4, T5)] {
       type Out = (p1.Out, p2.Out, p3.Out, p4.Out, p5.Out)
       def apply(x: (T1, T2, T3, T4, T5), conf: ScoobiConfiguration) =
         (p1.apply(x._1, conf), p2.apply(x._2, conf), p3.apply(x._3, conf), p4.apply(x._4, conf), p5.apply(x._5, conf))
     }
 
-  implicit def tuple6persisters[T1, T2, T3, T4, T5, T6]  (implicit p1: Persister[T1], p2: Persister[T2], p3: Persister[T3], p4: Persister[T4], p5: Persister[T5], p6: Persister[T6]) =
+  implicit def tuple6persisters[T1, T2, T3, T4, T5, T6](implicit p1: Persister[T1], p2: Persister[T2], p3: Persister[T3], p4: Persister[T4], p5: Persister[T5], p6: Persister[T6]) =
     new Persister[(T1, T2, T3, T4, T5, T6)] {
       type Out = (p1.Out, p2.Out, p3.Out, p4.Out, p5.Out, p6.Out)
       def apply(x: (T1, T2, T3, T4, T5, T6), conf: ScoobiConfiguration) =
         (p1.apply(x._1, conf), p2.apply(x._2, conf), p3.apply(x._3, conf), p4.apply(x._4, conf), p5.apply(x._5, conf), p6.apply(x._6, conf))
     }
 
-  implicit def tuple7persisters[T1, T2, T3, T4, T5, T6, T7]  (implicit p1: Persister[T1], p2: Persister[T2], p3: Persister[T3], p4: Persister[T4], p5: Persister[T5], p6: Persister[T6], p7: Persister[T7]) =
+  implicit def tuple7persisters[T1, T2, T3, T4, T5, T6, T7](implicit p1: Persister[T1], p2: Persister[T2], p3: Persister[T3], p4: Persister[T4], p5: Persister[T5], p6: Persister[T6], p7: Persister[T7]) =
     new Persister[(T1, T2, T3, T4, T5, T6, T7)] {
       type Out = (p1.Out, p2.Out, p3.Out, p4.Out, p5.Out, p6.Out, p7.Out)
       def apply(x: (T1, T2, T3, T4, T5, T6, T7), conf: ScoobiConfiguration) =
         (p1.apply(x._1, conf), p2.apply(x._2, conf), p3.apply(x._3, conf), p4.apply(x._4, conf), p5.apply(x._5, conf), p6.apply(x._6, conf), p7.apply(x._7, conf))
     }
 
-  implicit def tuple8persisters[T1, T2, T3, T4, T5, T6, T7, T8]  (implicit p1: Persister[T1], p2: Persister[T2], p3: Persister[T3], p4: Persister[T4], p5: Persister[T5], p6: Persister[T6], p7: Persister[T7], p8: Persister[T8]) =
+  implicit def tuple8persisters[T1, T2, T3, T4, T5, T6, T7, T8](implicit p1: Persister[T1], p2: Persister[T2], p3: Persister[T3], p4: Persister[T4], p5: Persister[T5], p6: Persister[T6], p7: Persister[T7], p8: Persister[T8]) =
     new Persister[(T1, T2, T3, T4, T5, T6, T7, T8)] {
       type Out = (p1.Out, p2.Out, p3.Out, p4.Out, p5.Out, p6.Out, p7.Out, p8.Out)
       def apply(x: (T1, T2, T3, T4, T5, T6, T7, T8), conf: ScoobiConfiguration) =
         (p1.apply(x._1, conf), p2.apply(x._2, conf), p3.apply(x._3, conf), p4.apply(x._4, conf), p5.apply(x._5, conf), p6.apply(x._6, conf), p7.apply(x._7, conf), p8.apply(x._8, conf))
     }
-
 
 }
 
@@ -323,13 +316,11 @@ case class DListPersister[A](dlist: DList[A], sink: DataSink[_, _, A]) {
   def compressWith(codec: CompressionCodec, compressionType: CompressionType = CompressionType.BLOCK) = copy(sink = sink.outputCompression(codec))
 }
 
-
 sealed trait PFn[A] {
   type Ret
-  def plan(x: A): (Smart.DComp[_, _ <: Shape], Option[DataSink[_,_,_]])
+  def plan(x: A): (Smart.DComp[_, _ <: Shape], Option[DataSink[_, _, _]])
   def execute(x: A, c: ScoobiConfiguration): State[Eval.ST, Ret]
 }
-
 
 /** PFn type class instances for DLists (i.e. DListPersister) and DObjects. */
 object PFn {
@@ -337,18 +328,18 @@ object PFn {
   implicit def DListPersister[A] = new PFn[DListPersister[A]] {
     type Ret = Unit
     def plan(x: DListPersister[A]) = (x.dlist.getComp, Some(x.sink))
-    def execute(x: DListPersister[A], c: ScoobiConfiguration): State[Eval.ST, Unit] = c.mode match {
-      case true  => VectorMode.executeDListPersister(x, c)
-      case false => HadoopMode.executeDListPersister(x, c)
+    def execute(x: DListPersister[A], sc: ScoobiConfiguration): State[Eval.ST, Unit] = sc.mode match {
+      case InMemory        => VectorMode.executeDListPersister(x, sc)
+      case Cluster | Local => HadoopMode.executeDListPersister(x, sc)
     }
   }
 
   implicit def DObjectPersister[A] = new PFn[DObject[A]] {
     type Ret = A
     def plan(x: DObject[A]) = (x.getComp, None)
-    def execute(x: DObject[A], c: ScoobiConfiguration): State[Eval.ST, A] = c.mode match {
-      case true  => VectorMode.executeDObject(x, c)
-      case false => HadoopMode.executeDObject(x, c)
+    def execute(x: DObject[A], sc: ScoobiConfiguration): State[Eval.ST, A] = sc.mode match {
+      case InMemory        => VectorMode.executeDObject(x, sc)
+      case Cluster | Local => HadoopMode.executeDObject(x, sc)
     }
   }
 }

@@ -180,6 +180,7 @@ For testing, it can useful to run Scoobi applications locally only:
 
  - if you are using the `hadoop jar` command, you can specify a local configuration by either using the `fs`/`jt` arguments
  - if you are using sbt, you can pass the "`scoobi local`" argument for a local execution
+ - if you are using sbt, you can pass the "`scoobi inmemory`" argument for a fast execution backed up by Scala collections instead of Hadoop
 
 ### Logging
 

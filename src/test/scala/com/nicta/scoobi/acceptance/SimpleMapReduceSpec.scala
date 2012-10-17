@@ -58,12 +58,9 @@ class SimpleMapReduceSpec extends NictaSimpleJobs {
   }
 
   tag("issue #105")
-  "Fail M/R job when task fails" >> { implicit c: SC =>
-    if (sc.mode) ok
-    else {
-      fromInput("hello", "world").
-        map[String](_ => throw new RuntimeException("forcing a failure in the mapper")).run must throwA[JobExecException]
-    }
+  "Fail M/R job when task fails" >> { implicit sc: SC =>
+     fromInput("hello", "world").
+        map[String](_ => throw new RuntimeException("forcing a failure in the mapper")).run must throwA[JobExecException].unless(sc.isInMemory)
   }
 
   "We can materialize a DList with more than 1 reducer" >> { implicit c: SC =>

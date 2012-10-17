@@ -17,7 +17,7 @@ package com.nicta.scoobi
 package application
 
 import org.apache.hadoop.fs.FileSystem
-
+import Mode._
 /**
  * This trait provides methods to execute map-reduce code, either locally or on the cluster.
  *
@@ -58,10 +58,10 @@ trait Hadoop extends LocalHadoop with Cluster with LibJars { outer =>
   def configureForCluster(implicit configuration: ScoobiConfiguration): ScoobiConfiguration = {
     setLogFactory()
     configuration.jobNameIs(getClass.getSimpleName)
-    configuration.setRemote(remote = true)
-    configuration.setUploadedLibJars(uploaded = outer.upload)
+    configuration.modeIs(Cluster)
     configuration.set(FileSystem.FS_DEFAULT_NAME_KEY, fs)
     configuration.set("mapred.job.tracker", jobTracker)
+    configuration.setUploadedLibJars(uploaded = outer.upload)
     // delete libjars on the cluster
     if (deleteLibJars) deleteJars
     // include libjars in the ScoobiJob jar

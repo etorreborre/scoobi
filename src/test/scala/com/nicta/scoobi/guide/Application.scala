@@ -93,6 +93,7 @@ The following are the possible configuration arguments for Scoobi:
  level          | info                             | minimum level of statements to log
  category       | .*                               | regular expression. By default everything is logged. Use `scoobi` to display only Scoobi logs
  local          | false                            | if defined, run the Scoobi job locally
+ inmemory       | false                            | if defined, run the Scoobi job in memory backed up by Scala collections instead of Hadoop
  deletelibjars  | false                            | if defined, remove jars from the `libjars` directory before uploading them again
  nolibjars      | false                            | if defined, do not upload dependent jars to the `libjars` directory and include the Scoobi jar in the job jar
  useconfdir     | false                            | if defined, use the configuration files in `$HADOOP_HOME/conf` (useful when running apps from inside sbt)

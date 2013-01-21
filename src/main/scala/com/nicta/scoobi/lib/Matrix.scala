@@ -19,7 +19,7 @@ package lib
 import Scoobi._
 import scala.collection.mutable.ArrayBuffer
 import LinearAlgebra._
-import core.{Grouped, WireFormat}
+import core.{Grouped, WireFormat, Association1}
 import WireFormat._
 
 /**
@@ -271,8 +271,13 @@ object LinearAlgebra {
     {
       val left = matrix.map(a => (a._1._2, (a._1._1,a._2)))
 
-      error("")  /*
-      left.groupByKey.parallelDo(
+      val r = left.groupByKey.parallelDo(
+        new BasicDoFn[Association1[Int, (Int, Value)], ((Int, Int), Q)] {
+          def process(input: Association1[Int, (Int, Value)], emitter: Emitter[((Int, Int), Q)]) {
+            error("")
+          }
+        }
+      /*
         new BasicDoFn[(Int, Iterable[(Int, Value)]), ((Int, Int), Q)] {
           def process(input: (Int, Iterable[(Int, Value)]), emitter: Emitter[((Int, Int), Q)]) = {
             val bs = generateRow()
@@ -283,8 +288,13 @@ object LinearAlgebra {
               }
             }
           }
-        }).groupByKey.combine((a: Q, b: Q) => add(a, b))
-        */
+        }*/).groupByKey.list
+
+      val s: DList[(Int, Q)] = r.combine((a: Q, b: Q) => add(a, b))
+      val t: DMatrix[Int, Q] = s
+      error("")
+        //.combine((a: Q, b: Q) => add(a, b))
+
     }
 
   def matrixByMatrix[Elem: WireFormat: Ordering, V: WireFormat, Value: WireFormat, Q: WireFormat](

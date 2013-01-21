@@ -66,6 +66,9 @@ sealed trait Grouped[K, V] {
   def bimap[L, W](f: K => L, g: V => W)(implicit fl: WireFormat[L], fw: WireFormat[W]): Grouped[L, W] =
     Grouped(list map (_ bimap (f, g)))
 
+  def parallelDo[B : WireFormat](dofn: DoFn[Association1[K, V], B]): DList[B] =
+    list parallelDo dofn
+
 }
 
 object Grouped {

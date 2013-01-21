@@ -66,13 +66,14 @@ class PersistSpec extends NictaSimpleJobs {
         (l2.run, l3.run) === (Seq(11, 21, 31), Seq(12, 22, 32))
       }
     }
+
     "5.3 when we iterate with several computations" >> { implicit sc: ScoobiConfiguration =>
       var list: DList[(Int, Int)] = DList((1, 1))
 
       list.map(_._1).run
-      list = list.groupByKey.map(x => (1, 1))
+      list = list.groupByKey.paired.map(x => (1, 1))
       list.map(_._1).run
-      list = list.groupByKey.map(x => (1, 1))
+      list = list.groupByKey.paired.map(x => (1, 1))
       list.map(_._1).run
       ok
     }

@@ -271,29 +271,18 @@ object LinearAlgebra {
     {
       val left = matrix.map(a => (a._1._2, (a._1._1,a._2)))
 
-      val r = left.groupByKey.parallelDo(
+      left.groupByKey.parallelDo(
         new BasicDoFn[Association1[Int, (Int, Value)], ((Int, Int), Q)] {
           def process(input: Association1[Int, (Int, Value)], emitter: Emitter[((Int, Int), Q)]) {
-            error("")
-          }
-        }
-      /*
-        new BasicDoFn[(Int, Iterable[(Int, Value)]), ((Int, Int), Q)] {
-          def process(input: (Int, Iterable[(Int, Value)]), emitter: Emitter[((Int, Int), Q)]) = {
             val bs = generateRow()
 
-            for (a <- input._2) {
+            for (a <- input.values) {
               bs.zipWithIndex.foreach {
                 b => emitter.emit(((a._1, b._2), mult(a._2, b._1)))
               }
             }
           }
-        }*/).groupByKey.list
-
-      val s: DList[(Int, Q)] = r.combine((a: Q, b: Q) => add(a, b))
-      val t: DMatrix[Int, Q] = s
-      error("")
-        //.combine((a: Q, b: Q) => add(a, b))
+        }).groupByKey.list.combine[(Int, Int), Q]((a: Q, b: Q) => add(a, b))
 
     }
 
@@ -304,7 +293,7 @@ object LinearAlgebra {
     add: (Q, Q) => Q): DMatrix[Elem, Q] = {
 
     val left = l.by(_._1._2).map(x => (x._1, Left(x._2): Either[((Elem, Elem), Value), ((Elem, Elem), V)]))
-      val right = r.by(_._1._1).map(x => (x._1, Right(x._2): Either[((Elem, Elem), Value), ((Elem, Elem), V)]))
+    val right = r.by(_._1._1).map(x => (x._1, Right(x._2): Either[((Elem, Elem), Value), ((Elem, Elem), V)]))
 
     error("")  /*
 

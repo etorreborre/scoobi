@@ -152,6 +152,8 @@ object Relational {
     val d1s: DList[(K, Either[A, B])] = d1 map { case (k, a1) => (k, Left(a1)) }
     val d2s: DList[(K, Either[A, B])] = d2 map { case (k, a2) => (k, Right(a2)) }
 
+    error("")  /*
+
     (d1s ++ d2s).groupByKey map {
       case (k, as) => {
         val vb1 = new VectorBuilder[A]()
@@ -163,6 +165,7 @@ object Relational {
         (k, (vb1.result().toIterable, vb2.result().toIterable))
       }
     }
+    */
   }
 
   private def innerJoin[T, A, B] = new BasicDoFn[((T, Boolean), Iterable[Either[A, B]]), (T, (A, B))] {
@@ -261,7 +264,7 @@ object Relational {
       }
     }
 
-    (left ++ right).groupByKeyWith(grouping).parallelDo(dofn)
+    error("") // (left ++ right).groupByKeyWith(grouping).parallelDo(dofn)
   }
 
 

@@ -257,7 +257,7 @@ object LinearAlgebra {
             }
           }
         }
-      }).groupByKey.list.combine[(Elem, Elem), Q]((a: Q, b: Q) => add(a, b))
+      }).groupByKey.combine((a: Q, b: Q) => add(a, b))
     }
 
   def matrixByDenseFunc[V: WireFormat, Value: WireFormat, Q: WireFormat](
@@ -279,7 +279,7 @@ object LinearAlgebra {
               }
             }
           }
-        }).groupByKey.list.combine[(Int, Int), Q]((a: Q, b: Q) => add(a, b))
+        }).groupByKey.combine((a: Q, b: Q) => add(a, b))
 
     }
 

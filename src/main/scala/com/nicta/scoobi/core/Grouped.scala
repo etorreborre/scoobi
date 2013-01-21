@@ -69,6 +69,9 @@ sealed trait Grouped[K, V] {
   def parallelDo[B : WireFormat](dofn: DoFn[Association1[K, V], B]): DList[B] =
     list parallelDo dofn
 
+  def combine(f: (V, V) => V)(implicit wk: WireFormat[K], wv: WireFormat[V]): DList[(K, V)] =
+    list combine f
+
 }
 
 object Grouped {

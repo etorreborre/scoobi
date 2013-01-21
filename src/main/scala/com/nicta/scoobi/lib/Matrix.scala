@@ -247,20 +247,17 @@ object LinearAlgebra {
     {
       val left = matrix.by(_._1._2)
 
-      error("")  /*
-      left.groupByKey.parallelDo(
-        new BasicDoFn[(Elem, Iterable[((Elem, Elem), Value)]), ((Elem, Elem), Q)] {
-          def process(input: (Elem, Iterable[((Elem, Elem), Value)]), emitter: Emitter[((Elem, Elem), Q)]) = {
-            val bs = generateRow()
+      left.groupByKey.parallelDo(new BasicDoFn[Association1[Elem, ((Elem, Elem), Value)], ((Elem, Elem), Q)] {
+        def process(input: Association1[Elem, ((Elem, Elem), Value)], emitter: Emitter[((Elem, Elem), Q)]) {
+          val bs = generateRow()
 
-            for (a <- input._2) {
-              bs.foreach {
-                b => emitter.emit(((a._1._1, b._1), mult(a._2, b._2)))
-              }
+          for (a <- input.values) {
+            bs.foreach {
+              b => emitter.emit(((a._1._1, b._1), mult(a._2, b._2)))
             }
           }
-        }).groupByKey.combine((a: Q, b: Q) => add(a, b))
-        */
+        }
+      }).groupByKey.list.combine[(Elem, Elem), Q]((a: Q, b: Q) => add(a, b))
     }
 
   def matrixByDenseFunc[V: WireFormat, Value: WireFormat, Q: WireFormat](

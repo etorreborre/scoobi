@@ -333,12 +333,9 @@ object LinearAlgebra {
     r: DMatrix[Elem, V],
     mult: (Value, V) => Q,
     add: (Q, Q) => Q): DMatrix[Elem, Q] =
-    error("")  /*
-
     (l.by(_._1._2) join r.by(_._1._1))
       .map { case (_, (a, b)) => ((a._1._1, b._1._2), mult(a._2, b._2)) }
       .groupByKey
       .combine(add)
-      */
 }
 

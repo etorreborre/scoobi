@@ -292,32 +292,28 @@ object LinearAlgebra {
     val left = l.by(_._1._2).map(x => (x._1, Left(x._2): Either[((Elem, Elem), Value), ((Elem, Elem), V)]))
     val right = r.by(_._1._1).map(x => (x._1, Right(x._2): Either[((Elem, Elem), Value), ((Elem, Elem), V)]))
 
-    error("")  /*
+    (left ++ right).groupByKey.parallelDo(new BasicDoFn[Association1[Elem, Either[((Elem, Elem), Value), ((Elem, Elem), V)]], ((Elem, Elem), Q)] {
+      def process(input: Association1[Elem, Either[((Elem, Elem), Value), ((Elem, Elem), V)]], emitter: Emitter[((Elem, Elem), Q)]) {
+        val as: ArrayBuffer[((Elem, Elem), Value)] = new ArrayBuffer[((Elem, Elem), Value)]()
+        val bs: ArrayBuffer[((Elem, Elem), V)] = new ArrayBuffer[((Elem, Elem), V)]()
 
-      (left ++ right).groupByKey.parallelDo(
-        new BasicDoFn[(Elem, Iterable[Either[((Elem, Elem), Value), ((Elem, Elem), V)]]), ((Elem, Elem), Q)] {
-          def process(input: (Elem, Iterable[Either[((Elem, Elem), Value), ((Elem, Elem), V)]]), emitter: Emitter[((Elem, Elem), Q)]) = {
-            val as: ArrayBuffer[((Elem, Elem), Value)] = new ArrayBuffer[((Elem, Elem), Value)]()
-            val bs: ArrayBuffer[((Elem, Elem), V)] = new ArrayBuffer[((Elem, Elem), V)]()
-
-            input._2 foreach {
-              case Left(a) => {
-                as += a
-                bs.foreach {
-                  b => emitter.emit((a._1._1, b._1._2), mult(a._2, b._2))
-                }
-              }
-              case Right(b) => {
-                bs += b
-                as.foreach {
-                  a => emitter.emit((a._1._1, b._1._2), mult(a._2, b._2))
-                }
-              }
+        input.values foreach {
+          case Left(a) => {
+            as += a
+            bs.foreach {
+              b => emitter.emit((a._1._1, b._1._2), mult(a._2, b._2))
             }
           }
-        }).groupByKey.combine((a: Q, b: Q) => add(a, b))
-        */
-    }
+          case Right(b) => {
+            bs += b
+            as.foreach {
+              a => emitter.emit((a._1._1, b._1._2), mult(a._2, b._2))
+            }
+          }
+        }
+      }
+    }).combine[(Elem, Elem), Q]((a: Q, b: Q) => add(a, b))
+  }
 
   def matrixByVector[Elem: WireFormat: Ordering, V: WireFormat, Value: WireFormat, Q: WireFormat: Ordering](
     l: DMatrix[Elem, Value],

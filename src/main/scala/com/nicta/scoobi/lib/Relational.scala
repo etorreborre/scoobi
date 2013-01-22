@@ -237,7 +237,7 @@ object Relational {
                        V : WireFormat](
     d1: DList[(K, A)],
     d2: DList[(K, B)])(dofn: BasicDoFn[Association1[(K, Boolean), Either[A, B]], (K, V)]): DList[(K, V)] = {
-        /*
+
     /* Map left and right DLists to be of the same type. Label the left as 'true' and the
      * right as 'false'. Note the hack cause DList doesn't yet have the co/contravariance. */
     val left = d1.map(v => { val e: Either[A, B] = Left[A, B](v._2); ((v._1, true), e) })
@@ -265,8 +265,6 @@ object Relational {
     }
 
     (left ++ right).groupByKeyWith(grouping).parallelDo(dofn)
-    */
-    error("")
   }
 
 

@@ -223,7 +223,13 @@ trait DList[A] extends DataSinks with Persistent[Seq[A]] {
 
     /* Group all elements together (so they go to the same reducer task) and then
      * combine them. */
-/*
+
+    val rr = imc.groupBy(_ => 0)
+    val ss = rr.combine(op)
+    val tt = ss.map(_._2)
+    val uu = tt.materialise
+
+ /*
      val x: DObject[Iterable[A]] = imc.groupBy(_ => 0).combine(op).map(_._2).materialise
     x map (_.headOption getOrElse (sys.error("the reduce operation is called on an empty list")))
     */

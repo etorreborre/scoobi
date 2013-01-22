@@ -63,13 +63,19 @@ trait DList[A] extends DataSinks with Persistent[Seq[A]] {
   def combine[K, V](f: (V, V) => V)(implicit wk: WireFormat[K], wv: WireFormat[V]): DList[(K, V)]
 
   @deprecated(message="use materialise instead", since="0.6.0")
-  def materialize: DObject[Iterable[A]] = error("") // materialise
+  def materialize: DObject[Iterable[A]] = materialise
 
   /**
    * Turn a distributed list into a normal, non-distributed collection that can be accessed
    * by the client
    */
-  def materialise: DObject[Iterable1[A]]
+  def materialise: DObject[Iterable[A]]
+
+  /**
+   * Turn a distributed list into a normal, non-distributed non-empty collection that can be accessed
+   * by the client
+   */
+  def materialise1: DObject[Iterable1[A]]
 
   // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   // Derived functionality (return DLists).
@@ -223,7 +229,7 @@ trait DList[A] extends DataSinks with Persistent[Seq[A]] {
 
     /* Group all elements together (so they go to the same reducer task) and then
      * combine them. */
-    imc.groupBy(_ => 0).combine(op).map(_._2).materialise.map(_.head)
+    imc.groupBy(_ => 0).combine(op).map(_._2).materialise1.map(_.head)
   }
 
   /**Multiply up the elements of this distribute list. */

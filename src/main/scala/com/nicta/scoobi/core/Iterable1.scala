@@ -292,6 +292,9 @@ trait Iterable1[+A] {
   def toSeq: Seq[A] =
     toIterable.toSeq
 
+  def toMap[T, U](implicit ev: A <:< (T, U)): Map[T, U] =
+    toIterable.toMap
+
   /**
    * Convert this iterable to a stream.
    */

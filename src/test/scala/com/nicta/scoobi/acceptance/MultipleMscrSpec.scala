@@ -55,6 +55,7 @@ class MultipleMscrSpec extends NictaSimpleJobs {
     (unique(input1) join unique(input2)).run must_== Seq(("hello", ("hello", "hello")))
   }
 
+  error("") /*
   "A DList grouped in two different ways with one of them materialised and then joined to the other should work." >> { implicit c: SC =>
 
     val input = fromDelimitedInput("k1,v1","k2,v2").collect { case key :: value :: _ => (key, value) }
@@ -71,7 +72,7 @@ class MultipleMscrSpec extends NictaSimpleJobs {
     dObjectJoinedToInputGroupedDiff.run must_== Seq(
         (expectedGBKs, ("v1",Seq(("k1","v1")))),
         (expectedGBKs, ("v2",Seq(("k2","v2")))))
-  }
+  }             */
 
   "A DList grouped in two different ways with one of them grouped again, materialised, then joined to the other." >> { implicit c: SC =>
 

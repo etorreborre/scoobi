@@ -72,6 +72,11 @@ sealed trait Grouped[K, V] {
   def combine(f: (V, V) => V)(implicit wk: WireFormat[K], wv: WireFormat[V]): DList[(K, V)] =
     list combine f
 
+  def materialise: DObject[Iterable[Association1[K, V]]]  =
+    list.materialise
+
+  def materialise1: DObject[Iterable1[Association1[K, V]]] =
+    list.materialise1
 }
 
 object Grouped {

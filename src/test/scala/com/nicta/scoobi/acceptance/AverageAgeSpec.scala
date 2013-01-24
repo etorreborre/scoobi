@@ -22,7 +22,7 @@ import AverageAge._
 import io.text.TextInput.{ALong, AnInt}
 
 class AverageAgeSpec extends NictaSimpleJobs {
-
+    error("")    /*
   "The average age of a list of persons can be computed as a distributed job" >> { implicit sc: SC =>
     val input =
       fromInput("100,Ben,Lever,31",
@@ -46,7 +46,7 @@ class AverageAgeSpec extends NictaSimpleJobs {
     }
 
     averages.run.sorted.mkString(", ") must_== "(Ben,29), (Michael,40), (Rami,35), (Sean,57), (Tom,55)"
-  }
+  }    */
 }
 
 object AverageAge {

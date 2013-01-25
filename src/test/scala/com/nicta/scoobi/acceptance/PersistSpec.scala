@@ -35,6 +35,7 @@ class PersistSpec extends NictaSimpleJobs {
   }
   endp
 
+  error("") /*
   "5. 2 materialised lists with a common ancestor" >> {
     "5.1 when we only want one list, only the computations for that list must be executed" >> { implicit sc: ScoobiConfiguration =>
       val l1 = DList(1, 2, 3).map(_ * 10)
@@ -66,6 +67,7 @@ class PersistSpec extends NictaSimpleJobs {
         (l2.run, l3.run) === (Seq(11, 21, 31), Seq(12, 22, 32))
       }
     }
+
     "5.3 when we iterate with several computations" >> { implicit sc: ScoobiConfiguration =>
       var list: DList[(Int, Int)] = DList((1, 1))
 
@@ -79,6 +81,7 @@ class PersistSpec extends NictaSimpleJobs {
 
   }
   end
+  */
 
   "6. 2 objects and a list" >> { implicit sc: ScoobiConfiguration =>
     val list: DList[Int]    = DList(1, 2, 3)

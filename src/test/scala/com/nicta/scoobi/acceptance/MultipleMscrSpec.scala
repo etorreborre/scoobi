@@ -74,6 +74,7 @@ class MultipleMscrSpec extends NictaSimpleJobs {
         (expectedGBKs, ("v2",Seq(("k2","v2")))))
   }             */
 
+  error("") /*
   "A DList grouped in two different ways with one of them grouped again, materialised, then joined to the other." >> { implicit c: SC =>
 
     val input = fromDelimitedInput("k1,v1","k2,v2").collect { case key :: value :: _ => (key, value) }
@@ -93,7 +94,9 @@ class MultipleMscrSpec extends NictaSimpleJobs {
         (expectedGBKs, ("v1",Seq(("k1","v1")))),
         (expectedGBKs, ("v2",Seq(("k2","v2")))))
   }
+  */
 
+  error("") /*
   "Able to replicate pipelines that share inputs." >> { implicit c: SC =>
 
     def mkkv(x: DList[Int]) = x map { v => (v, v) }
@@ -114,7 +117,9 @@ class MultipleMscrSpec extends NictaSimpleJobs {
     (r0.run.head must_== (1, 1))
     (r1.run.head must_== (1, 1))
   }
+  */
 
+  error("") /*
   "Gbks with 'cross-over' dependencies are placed in seperate MSCRs." >> { implicit c: SC =>
 
     val aa: DList[(Int, Int)] = DList((1, 1))
@@ -135,4 +140,5 @@ class MultipleMscrSpec extends NictaSimpleJobs {
     (r0.run.head must_== (1, 1))
     (r1.run.head must_== (1, 1))
   }
+  */
 }

@@ -77,6 +77,10 @@ sealed trait Grouped[K, V] {
 
   def materialise1: DObject[Iterable1[Association1[K, V]]] =
     list.materialise1
+
+  def filter(p: Association1[K, V] => Boolean): Grouped[K, V] =
+    Grouped(list filter p)
+
 }
 
 object Grouped {

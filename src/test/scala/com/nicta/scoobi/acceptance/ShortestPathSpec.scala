@@ -21,7 +21,7 @@ import testing.mutable.NictaSimpleJobs
 import ShortestPath._
 
 class ShortestPathSpec extends NictaSimpleJobs {
-
+    error("") /*
   "The shortest path in a graph can be computed using Hadoop" >> { implicit sc: SC =>
     val nodes =
       fromInput("A B", "A C", "C D", "C E", "D E", "F G", "E F", "G E")
@@ -45,6 +45,7 @@ class ShortestPathSpec extends NictaSimpleJobs {
 
     paths.run.sortBy(_._1) must_== Seq(("A", 0), ("B", 1), ("C", 1), ("D", 2), ("E", 2), ("F", 3), ("G", 3))
   }
+  */
 }
 
 

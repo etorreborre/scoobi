@@ -21,6 +21,7 @@ import testing.mutable.NictaSimpleJobs
 import SecondarySort._
 
 class SecondarySortSpec extends NictaSimpleJobs {
+  error("") /*
   "We can do a secondary sort by using a Grouping on the key" >> { implicit sc: ScoobiConfiguration =>
 
     val names: DList[(FirstName, LastName)] = DList(
@@ -44,6 +45,7 @@ class SecondarySortSpec extends NictaSimpleJobs {
       "(Mark,Edison,Twain)",
       "(Michael,J. Fox,Jackson,Jordan,Landon)").mkString
   }
+  */
 }
 
 object SecondarySort {

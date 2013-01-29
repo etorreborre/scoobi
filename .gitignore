@@ -9,7 +9,6 @@ src/main/*.iml
 
 .jvmopts
 .sbtopts
-pgp.sbt
 .history
 .cache
 .project

@@ -164,7 +164,8 @@ class SimpleDListsSpec extends NictaSimpleJobs with CompNodeData {
   error("") /*
   "26. (l1 ++ l2).groupByKey === (l1.groupByKey ++ l2.groupByKey).map { case (k, vs) => (k, vs.flatten) }" >> { implicit sc: ScoobiConfiguration =>
     val (l1, l2) = (DList(1 -> "hello", 2 -> "world"), DList(1 -> "hi", 2 -> "you"))
-    normalise((l1 ++ l2).groupByKey.run) === normalise((l1.groupByKey ++ l2.groupByKey).groupByKey.map { case (k, vs) => (k, vs.flatten) }.run)
+    normalise((l1 ++ l2).groupByKey.list.run) === normalise((l1.groupByKey ++ l2.groupByKey).groupByKey.map { case (k, vs) => (k, vs.flatten) }.list.run)
   }
   */
+
 }

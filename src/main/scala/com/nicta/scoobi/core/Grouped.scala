@@ -81,7 +81,7 @@ sealed trait Grouped[K, V] {
   def filter(p: Association1[K, V] => Boolean): Grouped[K, V] =
     Grouped(list filter p)
 
-  def groupByKey(implicit ev: /* Association1[K, V] <:< (K, V), */ wk: WireFormat[K], gpk: Grouping[K], wv: WireFormat[V]): Grouped[K, Iterable1[V]] = {
+  def groupByKey(implicit /* ev: Association1[K, V] <:< (K, V), */ wk: WireFormat[K], gpk: Grouping[K], wv: WireFormat[V]): Grouped[K, Iterable1[V]] = {
     val r = list.groupByKey
     error("")
   }

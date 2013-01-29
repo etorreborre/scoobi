@@ -141,13 +141,12 @@ class SimpleDListsSpec extends NictaSimpleJobs with CompNodeData {
     normalise(l4.run) === "Vector((strt,a), (strt,aa))"
   }
   */
-  error("") /*
+
   "23. (pd + pd) + gbk + reducer" >> { implicit sc: ScoobiConfiguration =>
     def list = new DListImpl[String](pd(load, load))
     val l3 = list.filter(_ => true).filter(_ => true)
     normalise(l3.run) === "Vector(start, start)"
   }
-  */
 
   "24. join on a gbk" >> { implicit sc: ScoobiConfiguration =>
     val l1 = DList("hello").materialise

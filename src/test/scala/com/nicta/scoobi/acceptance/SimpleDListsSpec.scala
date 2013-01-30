@@ -43,25 +43,25 @@ class SimpleDListsSpec extends NictaSimpleJobs with CompNodeData {
       haveTheSameElementsAs(Seq((1, Seq("hello", "world"))))
   }
   */
-   error("") /*
   "9. combine + filter" >> { implicit sc: SC =>
-    DList((1, Seq("hello", "world")), (2, Seq("universe"))).combine((_:String)+(_:String)).filter { case (k, v) => k >= 1 }.run.toSet must
+    val r = DList((1, Seq("hello", "world")), (2, Seq("universe")))
+    val s = r.combine((_:String)+(_:String))
+    /*
+    DList((1, Seq("hello", "world")), (2, Seq("universe"))).combine((_:String)+(_:String)).filter { case (k, _) => k >= 1 }.run.toSet must
       be_==(Set((1, "helloworld"), (2, "universe"))) or
       be_==(Set((1, "worldhello"), (2, "universe")))
+      */
+    error(""): Boolean
   }
-  */
-  error("") /*
   "10. groupByKey + combine + groupByKey" >> { implicit sc: SC =>
-    DList((1, "1")).filter(_ => true).groupByKey.combine((a: String, b: String) => a).groupByKey.filter(_ => true).run === Seq((1, Seq("1")))
+    DList((1, "1")).filter(_ => true).groupByKey.combine((a: String, _: String) => a).groupByKey.filter(_ => true).run === Seq((1, Seq("1")))
   }
-  */
   "11. groupByKey(flatten(groupByKey(l1), l1))" >> { implicit sc: SC =>
     val l0 = DList((1, "a"))
-    val l1 = l0.groupByKey // (1, Iterable("a"))
-    val l2 = l0.map { case (i, a) => (i, Iterable(a)) } // (1, Iterable("a"))
-    // val l = (l1 ++ l2).groupByKey // (1, Iterable(Iterable("a"), Iterable("a")))
-    // l.run must haveTheSameElementsAs(Seq((1, Iterable(Seq("a"), Seq("a")))))
-    error(""): Boolean
+    val l1 = l0.groupByKey.paired // (1, Iterable("a"))
+    val l2 = l0.map { case (i, a) => (i, core.Iterable1(a)) } // (1, Iterable("a"))
+    val l = (l1 ++ l2).groupByKey // (1, Iterable(Iterable("a"), Iterable("a")))
+    l.run must haveTheSameElementsAs(Seq((1, core.Iterable1(Seq("a"), Seq("a")))))
   }
   "12. 2 parallelDos on a flatten" in { implicit sc: SC =>
     (DList("hello") ++ DList("world")).materialise.run.toSet === Set("hello", "world")

@@ -81,13 +81,15 @@ sealed trait Grouped[K, V] {
   def filter(p: Association1[K, V] => Boolean): Grouped[K, V] =
     Grouped(list filter p)
 
-  def groupByKey(implicit /* ev: Association1[K, V] <:< (K, V), */ wk: WireFormat[K], gpk: Grouping[K], wv: WireFormat[V]): Grouped[K, Iterable1[V]] = {
-    // val r = list.groupByKey
-    error("")
-  }
+  import impl.plan.DListImpl
+  import impl.plan.comp.GroupByKey
+  import WireFormat.wireFormat
+
+  def groupByKey(implicit wk: WireFormat[K], gpk: Grouping[K], wv: WireFormat[V]): Grouped[K, Iterable1[V]] =
+    Grouped(new DListImpl(GroupByKey(list.getComp, wk, gpk, wv))(wireFormat[Association1[K, Iterable1[V]]]))
 
   def ++(g: Grouped[K, V]): Grouped[K, V] =
-    Grouped(error(""))
+    Grouped(list ++ g.list)
 }
 
 object Grouped {

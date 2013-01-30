@@ -76,7 +76,6 @@ class SimpleDListsSpec extends NictaSimpleJobs with CompNodeData {
     normalise(list.materialise.run) === "Vector((a,Vector(b)))"
   }
   */
-  error("") /*
   "14. gbk1 with reducer + gbk2 with output feeding gbk1" >> { implicit sc: SC =>
     val l0 = DList((1, "a"))
     val l1 = l0.groupByKey.filter(_ => true)
@@ -86,8 +85,6 @@ class SimpleDListsSpec extends NictaSimpleJobs with CompNodeData {
     normalise(l1.run) === "Vector((1,Vector(a)))"
     normalise(l3.run) === "Vector((Vector(b),(1,Vector(a))))"
   }
-  */
-  error("") /*
   "15. 2 flattened parallelDos + gbk + reducer" >> { implicit sc: SC =>
     val (l1, l2) = (DList((1, "hello")), DList((1, "world")))
     val l3 = (l1 ++ l2).groupByKey.filter(_ => true).filter(_ => true)
@@ -100,12 +97,10 @@ class SimpleDListsSpec extends NictaSimpleJobs with CompNodeData {
     letters.joinFullOuter(grouped)
     normalise(letters.joinFullOuter(grouped).run) ===
       "Vector((a,(Some(1),Some(Vector(apple)))), (b,(None,Some(Vector(banana)))), (c,(None,Some(Vector(cat)))), (d,(None,Some(Vector(dancer)))), (o,(Some(4),Some(Vector(orchard)))))"
-    error(""): Boolean
   }
-  */
   "17. parallelDo + gbk + combine + parallelDo + gbk + reducer" >> { implicit sc: SC =>
     val l1 = DList((1, "hello")).groupByKey.combine((_:String)+(_:String)).map(_ => (1, "hello")).groupByKey.filter(_ => true)
-    normalise(l1.list.run) === "Vector((1,Vector(hello)))"
+    normalise(l1.run) === "Vector((1,Vector(hello)))"
   }
   "18. tree of parallelDos" >> { implicit sc: ScoobiConfiguration =>
     def list = DList("hello").map(_.partition(_ > 'm'))

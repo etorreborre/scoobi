@@ -13,6 +13,18 @@ sealed trait Grouped[K, V] {
   val list: DList[Association1[K, V]]
 
   /**
+   * Deconstruct the association to a pair.
+   */
+  def paired(implicit WK: WireFormat[K], WV: WireFormat[V]): DList[(K, Iterable1[V])] =
+    list map (_.paired)
+
+  /** make a Grouped runnable, executing the computation and returning the values */
+  def run(implicit configuration: core.ScoobiConfiguration): Seq[Association1[K, V]] = {
+    import com.nicta.scoobi.Scoobi._
+    list.run
+  }
+
+  /**
    * Run a function on the values of the distributed list to produce new values.
    */
   def mapValues[W](f: Iterable1[V] => Iterable1[W])(implicit fk: WireFormat[K], fw: WireFormat[W]): Grouped[K, W] =

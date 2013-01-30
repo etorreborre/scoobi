@@ -133,14 +133,16 @@ class SimpleDListsSpec extends NictaSimpleJobs with CompNodeData {
     val (l1, l2) = (list1, list1)
     normalise((l1 ++ l2).filter(_ => true).run) === "Vector((strt,a), (strt,a))"
   }
-  error("") /*
+
   "22. parallelDo + combine" >> { implicit sc: ScoobiConfiguration =>
     val (l1, l2) = (DListImpl(source).map(_.partition(_ > 'a')), DListImpl(source).map(_.partition(_ > 'a')))
-    val l3 = l1.map { case (k, v) => (k, Seq.fill(2)(v)) }.combine((_:String) ++ (_:String))
-    val l4 = (l2 ++ l3).map(_.toString)
-    normalise(l4.run) === "Vector((strt,a), (strt,aa))"
+    val x = l1.map { case (k, v) => (k, Seq.fill(2)(v)) }
+    val y = x.combine((_:String) ++ (_:String))
+    // val l3 = l1.map { case (k, v) => (k, Seq.fill(2)(v)) }.combine((_:String) ++ (_:String))
+    // val l4 = (l2 ++ l3).map(_.toString)
+    // normalise(l4.run) === "Vector((strt,a), (strt,aa))"
+    error(""): Boolean
   }
-  */
 
   "23. (pd + pd) + gbk + reducer" >> { implicit sc: ScoobiConfiguration =>
     def list = new DListImpl[String](pd(load, load))

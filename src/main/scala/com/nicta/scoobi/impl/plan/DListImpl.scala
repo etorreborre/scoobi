@@ -53,8 +53,8 @@ class DListImpl[A](comp: ProcessNode)(implicit val wf: WireFormat[A]) extends DL
       (implicit ev:   A <:< (K, V),
                 wfk: WireFormat[K],
                 gpk:  Grouping[K],
-                wfv: WireFormat[V]): Grouped[K, V] =
-    Grouped(new DListImpl(GroupByKey(comp, wfk, gpk, wfv))(wireFormat[Association1[K, V]]))
+                wfv: WireFormat[V]): Grouped1[K, V] =
+    Grouped1(new DListImpl(GroupByKey(comp, wfk, gpk, wfv))(wireFormat[Association1[K, V]]))
 
   def combine[K, V]
       (f: (V, V) => V)

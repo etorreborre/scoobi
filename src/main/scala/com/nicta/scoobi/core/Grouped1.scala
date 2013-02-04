@@ -6,7 +6,7 @@ package core
  *
  * @see [[com.nicta.scoobi.core.Association1]]
  */
-sealed trait Grouped[K, V] {
+sealed trait Grouped1[K, V] {
   /**
    * The underlying distributed list.
    */
@@ -18,7 +18,7 @@ sealed trait Grouped[K, V] {
   def paired(implicit WK: WireFormat[K], WV: WireFormat[V]): DList[(K, Iterable1[V])] =
     list map (_.paired)
 
-  /** make a Grouped runnable, executing the computation and returning the values */
+  /** make a Grouped1 runnable, executing the computation and returning the values */
   def run(implicit configuration: core.ScoobiConfiguration): Seq[Association1[K, V]] = {
     import com.nicta.scoobi.Scoobi._
     list.run
@@ -27,37 +27,37 @@ sealed trait Grouped[K, V] {
   /**
    * Run a function on the values of the distributed list to produce new values.
    */
-  def mapValues[W](f: Iterable1[V] => Iterable1[W])(implicit fk: WireFormat[K], fw: WireFormat[W]): Grouped[K, W] =
-    Grouped(list map (_ mapValues f))
+  def mapValues[W](f: Iterable1[V] => Iterable1[W])(implicit fk: WireFormat[K], fw: WireFormat[W]): Grouped1[K, W] =
+    Grouped1(list map (_ mapValues f))
 
   /**
    * Run a function on each value in the distributed list to produce a distributed list with new values. Synonym for `:->`.
    */
-  def map[W](f: V => W)(implicit fk: WireFormat[K], fw: WireFormat[W]): Grouped[K, W] =
-    Grouped(list map (_ map f))
+  def map[W](f: V => W)(implicit fk: WireFormat[K], fw: WireFormat[W]): Grouped1[K, W] =
+    Grouped1(list map (_ map f))
 
   /**
    * Run a function on each value in the distributed list to produce a distributed list with new values. Synonym for `:->`.
    */
-  def mapa[W, X](f: Association1[K, V] => Association1[W, X])(implicit fk: WireFormat[K], fw: WireFormat[W], fx: WireFormat[X]): Grouped[W, X] =
-    Grouped(list map f)
+  def mapa[W, X](f: Association1[K, V] => Association1[W, X])(implicit fk: WireFormat[K], fw: WireFormat[W], fx: WireFormat[X]): Grouped1[W, X] =
+    Grouped1(list map f)
 
   /**
    * Run a function on each value in the distributed list to produce a distributed list with new values. Synonym for `map`.
    */
-  def :->[W](f: V => W)(implicit fk: WireFormat[K], fw: WireFormat[W]): Grouped[K, W] =
+  def :->[W](f: V => W)(implicit fk: WireFormat[K], fw: WireFormat[W]): Grouped1[K, W] =
     map(f)
 
   /**
    * Run a function on each key in the distributed list to produce a distributed list with new key. Synonym for `<-:`.
    */
-  def mapKeys[L](f: K => L)(implicit fl: WireFormat[L], fv: WireFormat[V]): Grouped[L, V] =
-    Grouped(list map (_ mapKey f))
+  def mapKeys[L](f: K => L)(implicit fl: WireFormat[L], fv: WireFormat[V]): Grouped1[L, V] =
+    Grouped1(list map (_ mapKey f))
 
   /**
    * Run a function on each key in the distributed list to produce a distributed list with new key. Synonym for `mapKeys`.
    */
-  def <-:[L](f: K => L)(implicit fl: WireFormat[L], fv: WireFormat[V]): Grouped[L, V] =
+  def <-:[L](f: K => L)(implicit fl: WireFormat[L], fv: WireFormat[V]): Grouped1[L, V] =
     mapKeys(f)
 
   /**
@@ -81,8 +81,8 @@ sealed trait Grouped[K, V] {
   /**
    * Map two functions on the keys and values (binary map) of the distributed list.
    */
-  def bimap[L, W](f: K => L, g: V => W)(implicit fl: WireFormat[L], fw: WireFormat[W]): Grouped[L, W] =
-    Grouped(list map (_ bimap (f, g)))
+  def bimap[L, W](f: K => L, g: V => W)(implicit fl: WireFormat[L], fw: WireFormat[W]): Grouped1[L, W] =
+    Grouped1(list map (_ bimap (f, g)))
 
   def parallelDo[B : WireFormat](dofn: DoFn[Association1[K, V], B]): DList[B] =
     list parallelDo dofn
@@ -96,26 +96,26 @@ sealed trait Grouped[K, V] {
   def materialise1: DObject[Iterable1[Association1[K, V]]] =
     list.materialise1
 
-  def filter(p: Association1[K, V] => Boolean): Grouped[K, V] =
-    Grouped(list filter p)
+  def filter(p: Association1[K, V] => Boolean): Grouped1[K, V] =
+    Grouped1(list filter p)
 
   import impl.plan.DListImpl
   import impl.plan.comp.GroupByKey
   import WireFormat.wireFormat
 
-  def groupByKey(implicit wk: WireFormat[K], gpk: Grouping[K], wv: WireFormat[V]): Grouped[K, Iterable1[V]] =
-    Grouped(new DListImpl(GroupByKey(list.getComp, wk, gpk, wv))(wireFormat[Association1[K, Iterable1[V]]]))
+  def groupByKey(implicit wk: WireFormat[K], gpk: Grouping[K], wv: WireFormat[V]): Grouped1[K, Iterable1[V]] =
+    Grouped1(new DListImpl(GroupByKey(list.getComp, wk, gpk, wv))(wireFormat[Association1[K, Iterable1[V]]]))
 
-  def ++(g: Grouped[K, V]): Grouped[K, V] =
-    Grouped(list ++ g.list)
+  def ++(g: Grouped1[K, V]): Grouped1[K, V] =
+    Grouped1(list ++ g.list)
 }
 
-object Grouped {
+object Grouped1 {
   /**
-   * Construct a `Grouped` with the given distributed list.
+   * Construct a `Grouped1` with the given distributed list.
    */
-  def apply[K, V](x: DList[Association1[K, V]]): Grouped[K, V] =
-    new Grouped[K, V] {
+  def apply[K, V](x: DList[Association1[K, V]]): Grouped1[K, V] =
+    new Grouped1[K, V] {
       val list = x
     }
 }

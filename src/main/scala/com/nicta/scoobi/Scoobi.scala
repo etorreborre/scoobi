@@ -31,7 +31,7 @@ object Scoobi extends core.WireFormatImplicits with core.GroupingImplicits with 
   val DObject = DObjects
   type DObject[A] = com.nicta.scoobi.core.DObject[A]
 
-  type Grouped[K, V] = com.nicta.scoobi.core.Grouped[K, V]
+  type Grouped1[K, V] = com.nicta.scoobi.core.Grouped1[K, V]
   type Association1[K, V] = com.nicta.scoobi.core.Association1[K, V]
   type DoFn[A, B] = com.nicta.scoobi.core.DoFn[A, B]
   type BasicDoFn[A, B] = com.nicta.scoobi.core.BasicDoFn[A, B]

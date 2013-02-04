@@ -19,7 +19,7 @@ package lib
 import Scoobi._
 import scala.collection.mutable.ArrayBuffer
 import LinearAlgebra._
-import core.{Grouped, WireFormat, Association1}
+import core.{Grouped1, WireFormat, Association1}
 import WireFormat._
 
 /**
@@ -87,7 +87,7 @@ case class InMemDenseVector[T : WireFormat](data: DObject[IndexedSeq[T]]) {
  * A distributed row-wise matrix. This is an efficient representation for multiplying by an in-memory vector. The contents of each row
  * must be small enough to fit in memory
  */
-case class DRowWiseMatrix[Elem: WireFormat : Ordering, T : WireFormat](data: Grouped[Elem, (Elem, T)]) {
+case class DRowWiseMatrix[Elem: WireFormat : Ordering, T : WireFormat](data: Grouped1[Elem, (Elem, T)]) {
   
   def byVector[V, R](
     dv: InMemDenseVector[V],
@@ -110,7 +110,7 @@ case class DRowWiseMatrix[Elem: WireFormat : Ordering, T : WireFormat](data: Gro
  * A col-wise matrix. This is an efficient representation for multiplying by an in-memory vector. The contents of each column
  * must be small enough to fit in memory
  */
-case class DColWiseMatrix[Elem, T](data: core.Grouped[Elem, (Elem, T)]) {
+case class DColWiseMatrix[Elem, T](data: core.Grouped1[Elem, (Elem, T)]) {
   def row(implicit E: WireFormat[Elem], O: Ordering[Elem], W: WireFormat[T]): DRowWiseMatrix[Elem, T] =
     DRowWiseMatrix(data)
 }

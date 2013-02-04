@@ -56,7 +56,7 @@ trait DList[A] extends DataSinks with Persistent[Seq[A]] {
   def ++(ins: DList[A]*): DList[A]
 
   /**Group the values of a distributed list with key-value elements by key. */
-  def groupByKey[K, V](implicit ev: A <:< (K, V), wk: WireFormat[K], gpk: Grouping[K], wv: WireFormat[V]): Grouped[K, V]
+  def groupByKey[K, V](implicit ev: A <:< (K, V), wk: WireFormat[K], gpk: Grouping[K], wv: WireFormat[V]): Grouped1[K, V]
 
   /**Apply an associative function to reduce the collection of values to a single value in a
    * key-value-collection distributed list. */
@@ -88,7 +88,7 @@ trait DList[A] extends DataSinks with Persistent[Seq[A]] {
    * secondary sorts, or groupings with strange logic (like making sure None's / nulls are
    * sprayed across all reducers
    */
-  def groupByKeyWith[K, V](grouping: Grouping[K])(implicit ev: A <:< (K, V), wfk: WireFormat[K], wfv: WireFormat[V]): Grouped[K, V] =
+  def groupByKeyWith[K, V](grouping: Grouping[K])(implicit ev: A <:< (K, V), wfk: WireFormat[K], wfv: WireFormat[V]): Grouped1[K, V] =
     groupByKey(ev, wfk, grouping, wfv)
 
   /**
@@ -171,12 +171,12 @@ trait DList[A] extends DataSinks with Persistent[Seq[A]] {
   }
 
   /** Group the values of a distributed list according to some discriminator function. */
-  def groupBy[K : WireFormat : Grouping](f: A => K): Grouped[K, A] =
+  def groupBy[K : WireFormat : Grouping](f: A => K): Grouped1[K, A] =
     map(x => (f(x), x)).groupByKey
 
   /** Group the value of a distributed list according to some discriminator function
     * and some grouping function. */
-  def groupWith[K : WireFormat](f: A => K)(gpk: Grouping[K]): Grouped[K, A] = {
+  def groupWith[K : WireFormat](f: A => K)(gpk: Grouping[K]): Grouped1[K, A] = {
     implicit def grouping = gpk
     map(x => (f(x), x)).groupByKey
   }

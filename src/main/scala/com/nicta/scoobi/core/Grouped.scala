@@ -37,6 +37,12 @@ sealed trait Grouped[K, V] {
     Grouped(list map (_ map f))
 
   /**
+   * Run a function on each value in the distributed list to produce a distributed list with new values. Synonym for `:->`.
+   */
+  def mapa[W, X](f: Association1[K, V] => Association1[W, X])(implicit fk: WireFormat[K], fw: WireFormat[W], fx: WireFormat[X]): Grouped[W, X] =
+    Grouped(list map f)
+
+  /**
    * Run a function on each value in the distributed list to produce a distributed list with new values. Synonym for `map`.
    */
   def :->[W](f: V => W)(implicit fk: WireFormat[K], fw: WireFormat[W]): Grouped[K, W] =

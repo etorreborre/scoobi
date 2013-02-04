@@ -37,12 +37,11 @@ class SimpleDListsSpec extends NictaSimpleJobs with CompNodeData {
   "7. flatMap + map" >> { implicit sc: SC =>
     DList("hello", "world").flatMap(_.toSeq.filterNot(_ == 'l')).map(_.toUpper).run.toSet === Set('H', 'E', 'O', 'W', 'R', 'D')
   }
-    error("") /*
+
   "8. groupByKey + filter" >> { implicit sc: SC =>
-    DList((1, "hello"), (1, "world")).groupByKey.filter { case (k, v) => k >= 1 }.run must
-      haveTheSameElementsAs(Seq((1, Seq("hello", "world"))))
-  }
-  */
+    DList((1, "hello"), (1, "world")).groupByKey.filter(_.key >= 1).run must
+          haveTheSameElementsAs(Seq((1, Seq("hello", "world"))))
+    }
 
   "9. combine + filter" >> { implicit sc: SC =>
     DList((1, Seq("hello", "world")), (2, Seq("universe"))).combine[Int, String]((_:String)+(_:String)).filter { case (k, v) => k >= 1 }.run must

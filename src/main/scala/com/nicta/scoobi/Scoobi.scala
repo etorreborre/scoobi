@@ -32,6 +32,7 @@ object Scoobi extends core.WireFormatImplicits with core.GroupingImplicits with 
   type DObject[A] = com.nicta.scoobi.core.DObject[A]
 
   type Grouped1[K, V] = com.nicta.scoobi.core.Grouped1[K, V]
+  type Iterable1[A] = com.nicta.scoobi.core.Iterable1[A]
   type Association1[K, V] = com.nicta.scoobi.core.Association1[K, V]
   type DoFn[A, B] = com.nicta.scoobi.core.DoFn[A, B]
   type BasicDoFn[A, B] = com.nicta.scoobi.core.BasicDoFn[A, B]

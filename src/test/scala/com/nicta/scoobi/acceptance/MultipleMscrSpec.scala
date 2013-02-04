@@ -93,7 +93,6 @@ class MultipleMscrSpec extends NictaSimpleJobs {
         (expectedGBKs, ("v2",Seq(("k2","v2")))))
   }
 
-  error("") /*
   "Able to replicate pipelines that share inputs." >> { implicit c: SC =>
 
     def mkkv(x: DList[Int]) = x map { v => (v, v) }
@@ -102,10 +101,10 @@ class MultipleMscrSpec extends NictaSimpleJobs {
     val b: DList[Int] = DList(1)
 
     val s: Seq[DObject[Iterable[(Int, Int)]]] = Seq(0, 1) map { _ =>
-      val w = (mkkv(a) ++ mkkv(b)).groupByKey map { case (k, vs) => (k, vs.head) }
-      val x =                    w.groupByKey map { case (k, vs) => (k, vs.head) }
+      val w = (mkkv(a) ++ mkkv(b)).groupByKey.paired map { case (k, vs) => (k, vs.head) }
+      val x =                    w.groupByKey.paired map { case (k, vs) => (k, vs.head) }
       val y = (mkkv(a) ++ x)
-      val z = y.groupByKey map { case (k, vs) => (k, vs.head) }
+      val z = y.groupByKey.paired map { case (k, vs) => (k, vs.head) }
       z.materialise
     }
 
@@ -114,9 +113,7 @@ class MultipleMscrSpec extends NictaSimpleJobs {
     (r0.run.head must_== (1, 1))
     (r1.run.head must_== (1, 1))
   }
-  */
 
-  error("") /*
   "Gbks with 'cross-over' dependencies are placed in seperate MSCRs." >> { implicit c: SC =>
 
     val aa: DList[(Int, Int)] = DList((1, 1))
@@ -125,10 +122,10 @@ class MultipleMscrSpec extends NictaSimpleJobs {
     val dd: DList[(Int, Int)] = DList((1, 1))
 
     val s: Seq[DObject[Iterable[(Int, Int)]]] = Seq(0, 1) map { i =>
-      val w = (aa ++ bb).groupByKey map { case (k, vs) => (k, vs.head) }
-      val x = ((if (i == 0) cc else dd) ++ w).groupByKey map { case (k, vs) => (k, vs.head) }
+      val w = (aa ++ bb).groupByKey.paired map { case (k, vs) => (k, vs.head) }
+      val x = ((if (i == 0) cc else dd) ++ w).groupByKey.paired map { case (k, vs) => (k, vs.head) }
       val y = ((if (i == 0) dd else cc) ++ x)
-      val z = y.groupByKey map { case (k, vs) => (k, vs.head) }
+      val z = y.groupByKey.paired map { case (k, vs) => (k, vs.head) }
       z.materialise
     }
 
@@ -137,5 +134,5 @@ class MultipleMscrSpec extends NictaSimpleJobs {
     (r0.run.head must_== (1, 1))
     (r1.run.head must_== (1, 1))
   }
-  */
+
 }

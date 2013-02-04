@@ -37,46 +37,39 @@ class DListSpec extends NictaSimpleJobs with TerminationMatchers {
     run(DList[Int]().sum) must throwAn[Exception](message = "the reduce operation is called on an empty list")
   }
 
-
-  error("") /*
   tag("issue 117")
   "A groupByKey followed by a groupByKey must be ok" >> { implicit sc: SC =>
-    val list = DList.tabulate(5)((n: Int) => ("hello" -> "world")).groupByKey.groupByKey
+    val list = DList.tabulate(5)((n: Int) => ("hello" -> "world")).groupByKey.groupByKey.list
     run(list).toString.split(", ").filter { case w => w contains "world" } must have size(5)
   }
-  */
 
-  error("") /*
   tag("issue 117")
   "A complex graph example must not throw an exception" >> { implicit sc: SC =>
 
     def simpleJoin[T: WireFormat, V: WireFormat](a: DList[(Int, T)], b: DList[(Int, V)]) =
-      (a.map(x => (x._1, x._1)) ++ b.map(x => (x._1, x._1))).groupByKey
+      (a.map(x => (x._1, x._1)) ++ b.map(x => (x._1, x._1))).groupByKey.list map (_.paired)
 
     val data = DList((12 -> 13), (14 -> 15), (13 -> 55))
     val (a, b, c, d, e) = (data, data, data, data, data)
 
     val q = simpleJoin(simpleJoin(a, b), simpleJoin(c, d))
-    val res = simpleJoin(q, simpleJoin(q, e).groupByKey)
+    val res = simpleJoin(q, simpleJoin(q, e).groupByKey.list map (_.paired))
 
     res.run must haveTheSameElementsAs(res.run(configureForInMemory(ScoobiConfiguration())))
   }
-  */
 
-  error("") /*
   tag("issue 127")
   "There must be no cyclic execution" >> { implicit sc: SC =>
     val input = fromKeyValues("k1,1", "k2,2")
 
-    val inputGrouped = input.groupBy(_._1)
-    val inputGroupedDifferently = input.groupBy(_._2)
+    val inputGrouped = input.groupBy(_._1).paired
+    val inputGroupedDifferently = input.groupBy(_._2).paired
     val inputGroupedAsDObject = inputGrouped.materialise
 
     val dObjectJoinedToInputGroupedDiff = (inputGroupedAsDObject join inputGroupedDifferently)
 
     run(dObjectJoinedToInputGroupedDiff) must terminate(sleep = 60.seconds)
   }
-  */
 
   tag("issue 119")
   "joining an object created from random elements and a DList must not crash" >> { implicit sc: SC =>
@@ -97,7 +90,6 @@ class DListSpec extends NictaSimpleJobs with TerminationMatchers {
     (aa ++ bb).run.sorted must_== (1 to 10).toSeq
   }
 
-  error("") /*
   "DLists can be concatenated via reduce" >> {
     "without group by key" >> { implicit sc: SC =>
       Seq.fill(5)(DList(1 -> 2)).reduce(_++_).run === Seq.fill(5)(1 -> 2)
@@ -106,6 +98,5 @@ class DListSpec extends NictaSimpleJobs with TerminationMatchers {
       Seq.fill(5)(DList(1 -> 2)).reduce(_++_).groupByKey.run.toList.toString === Seq(1 -> Vector.fill(5)(2)).toString
     }
   }
-  */
 
 }

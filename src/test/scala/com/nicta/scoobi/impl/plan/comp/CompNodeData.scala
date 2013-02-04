@@ -70,7 +70,7 @@ trait CompNodeData extends Data with ScalaCheckMatchers with CommandLineArgument
     /** lists of elements with a type (K, Iterable[V]) */
     def genList3(depth: Int = 1): Gen[DList[(String, Iterable1[String])]] =
       if (depth <= 1) genList2(1).map(l => l.map { case (k, v) => (k, v +:: Vector.apply(v)) })
-      else            Gen.oneOf(genList2(depth - 1).map(l => l.groupByKey.list.map(_.paired)),
+      else            Gen.oneOf(genList2(depth - 1).map(l => l.groupByKey.paired),
                                 genList3(depth - 1).map(l => l.map(identity))).memo
 
     /**

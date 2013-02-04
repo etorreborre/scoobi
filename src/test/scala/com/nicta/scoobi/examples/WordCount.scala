@@ -39,9 +39,8 @@ object WordCount extends ScoobiApp {
     // pairs where the key is the word, and the value the frequency (which to start with is 1)
     val keyValuePair: DList[(String, Int)] = lines flatMap { _.split(" ") } map { w => (w, 1) }
 
-    error("") /*
     // Now let's group all words that compare the same
-    val grouped: DList[(String, Iterable[Int])] = keyValuePair.groupByKey
+    val grouped: Grouped[String, Int] = keyValuePair.groupByKey
     // Now we have it in the form (Word, ['1', '1', '1', 1' etc.])
 
     // So what we want to do, is combine all the numbers into a single value (the frequency)
@@ -51,7 +50,6 @@ object WordCount extends ScoobiApp {
 
     // We can evaluate this, and write it to a text file
     persist(combined.toTextFile(outputDirectory))
-    */
   }
 
   /* Generate 'count' random words with a high amount of collisions */

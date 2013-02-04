@@ -43,15 +43,11 @@ class SimpleDListsSpec extends NictaSimpleJobs with CompNodeData {
       haveTheSameElementsAs(Seq((1, Seq("hello", "world"))))
   }
   */
+
   "9. combine + filter" >> { implicit sc: SC =>
-    val r = DList((1, Seq("hello", "world")), (2, Seq("universe")))
-    val s = r.combine((_:String)+(_:String))
-    /*
-    DList((1, Seq("hello", "world")), (2, Seq("universe"))).combine((_:String)+(_:String)).filter { case (k, _) => k >= 1 }.run.toSet must
-      be_==(Set((1, "helloworld"), (2, "universe"))) or
-      be_==(Set((1, "worldhello"), (2, "universe")))
-      */
-    error(""): Boolean
+    DList((1, Seq("hello", "world")), (2, Seq("universe"))).combine[Int, String]((_:String)+(_:String)).filter { case (k, v) => k >= 1 }.run must
+          be_==(Set((1, "helloworld"), (2, "universe"))) or
+          be_==(Set((1, "worldhello"), (2, "universe")))
   }
   "10. groupByKey + combine + groupByKey" >> { implicit sc: SC =>
     DList((1, "1")).filter(_ => true).groupByKey.combine((a: String, _: String) => a).groupByKey.filter(_ => true).run === Seq((1, Seq("1")))

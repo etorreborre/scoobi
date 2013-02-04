@@ -15,8 +15,8 @@ import core.{Persistent, DObject}
 trait Persist { outer =>
   /** Persisting */
   def persist[A](o: DObject[A])(implicit sc: core.ScoobiConfiguration) =     { sc.persist(o) }
-  def persist[A](list: core.DList[A])(implicit sc: core.ScoobiConfiguration) { sc.persist(list) }
-  def persist[A](ps: Persistent[_]*)(implicit sc: core.ScoobiConfiguration)  { sc.persist(ps) }
+  def persist[A](list: core.DList[A])(implicit sc: core.ScoobiConfiguration) = { sc.persist(list) }
+  def persist[A](ps: Persistent[_]*)(implicit sc: core.ScoobiConfiguration)  = { sc.persist(ps) }
 
   /**
    * run a list.
@@ -27,7 +27,7 @@ trait Persist { outer =>
    *    run(obj)
    *   ```
    */
-  def run[T](p: =>core.Persistent[T])(implicit configuration: core.ScoobiConfiguration): T = {
+  def run[T](p: core.Persistent[T])(implicit configuration: core.ScoobiConfiguration): T = {
     p match {
       case list: core.DList[_] => Vector(persist(list.materialise).toSeq:_*)
       case o: DObject[_]       => persist(o)

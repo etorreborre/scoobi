@@ -27,6 +27,7 @@ import org.apache.hadoop.mapreduce.Job
 
 import core._
 import impl.io.Helper
+import avro.AvroInput
 
 /** Smart functions for persisting distributed lists by storing them as text files. */
 object TextOutput {
@@ -55,10 +56,10 @@ object TextOutput {
       }
 
       def outputCheck(implicit sc: ScoobiConfiguration) {
-        if (Helper.pathExists(outputPath)(sc.conf))
+        if (Helper.pathExists(outputPath)(sc.configuration))
           if (overwrite) {
             logger.info("Deleting the pre-existing output path: " + outputPath.toUri.toASCIIString)
-            Helper.deletePath(outputPath)(sc.conf)
+            Helper.deletePath(outputPath)(sc.configuration)
           } else {
             throw new FileAlreadyExistsException("Output path already exists: " + outputPath)
           }
@@ -73,6 +74,12 @@ object TextOutput {
       lazy val outputConverter = new OutputConverter[NullWritable, A, A] {
         def toKeyValue(x: A) = (NullWritable.get, x)
       }
+
+      /**
+       * it is not possible to transform a Text sink, storing objects of type A to strings, to a Text source that could load
+       * strings into objects of type A because we don't know at this stage how to go from String => A
+       */
+      override def toSource: Option[Source] = None
     }
   }
 

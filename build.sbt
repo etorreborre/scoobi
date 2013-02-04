@@ -3,7 +3,7 @@ name := "scoobi"
 
 organization := "com.nicta"
 
-version := "0.7.0-cdh4-SNAPSHOT"
+version := "0.7.0-cdh4-FUTURE-SNAPSHOT"
 
 scalaVersion := "2.9.2"
 
@@ -16,8 +16,8 @@ libraryDependencies ++= Seq(
   "com.thoughtworks.xstream" % "xstream" % "1.4.3" intransitive(),
   "com.googlecode.kiama" %% "kiama" % "1.4.0",
   "com.github.mdr" %% "ascii-graphs" % "0.0.2",
-  "org.scalaz" %% "scalaz-core" % "7.0.0-M3",
-  "org.scalaz" %% "scalaz-concurrent" % "7.0.0-M3",
+  "org.scalaz" %% "scalaz-core" % "7.0.0-M7",
+  "org.scalaz" %% "scalaz-concurrent" % "7.0.0-M7",
   "org.specs2" %% "specs2" % "1.12.4-SNAPSHOT" % "optional",
   "org.specs2" % "classycle" % "1.4.1"% "test",
   "com.chuusai" %% "shapeless" % "1.2.2",

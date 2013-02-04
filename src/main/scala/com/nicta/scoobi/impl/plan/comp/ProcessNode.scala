@@ -8,9 +8,9 @@ import WireFormat._
 import mapreducer._
 import java.util.UUID._
 import CollectFunctions._
-import org.apache.hadoop.conf.Configuration
 import ScoobiConfigurationImpl._
-
+import scalaz._
+import Scalaz._
 /**
  * Processing node in the computation graph.
  *
@@ -18,10 +18,19 @@ import ScoobiConfigurationImpl._
  */
 trait ProcessNode extends CompNode {
   lazy val id: Int = UniqueId.get
+
+  /** unique identifier for the bridgeStore storing data for this node */
+  protected def bridgeStoreId: String
   /** ParallelDo, Combine, GroupByKey have a Bridge = sink for previous computations + source for other computations */
-  def bridgeStore: Bridge
+  lazy val bridgeStore = if (nodeSinks.isEmpty) Some(createBridgeStore) else oneSinkAsBridge
+  /** create a new bridgeStore if necessary */
+  def createBridgeStore = BridgeStore(bridgeStoreId, wf)
+  /** transform one sink into a Bridge if possible */
+  private lazy val oneSinkAsBridge: Option[Bridge] = nodeSinks.find(_.toSource.isDefined).flatMap(sink => sink.toSource.map(source => Bridge.create(source, sink, bridgeStoreId)))
+  /** @return all the additional sinks + the bridgeStore */
+  lazy val sinks = oneSinkAsBridge.fold(bridge => bridge +: nodeSinks.filterNot(_.id == bridge.id), bridgeStore.toSeq ++ nodeSinks)
   /** list of additional sinks for this node */
-  def sinks : Seq[Sink]
+  def nodeSinks : Seq[Sink]
   def addSink(sink: Sink) = updateSinks(sinks => sinks :+ sink)
   def updateSinks(f: Seq[Sink] => Seq[Sink]): ProcessNode
 }
@@ -42,41 +51,38 @@ case class ParallelDo(ins:           Seq[CompNode],
                       dofn:          DoFunction,
                       wfa:           WireReaderWriter,
                       wfb:           WireReaderWriter,
-                      sinks:         Seq[Sink] = Seq(),
+                      nodeSinks:     Seq[Sink] = Seq(),
                       bridgeStoreId: String = randomUUID.toString) extends ProcessNode {
 
   lazy val wf = wfb
   lazy val wfe = env.wf
-  override val toString = "ParallelDo ("+id+")[" + Seq(wfa, wfb, env.wf).mkString(",") + "] env: " + env
+  override val toString = "ParallelDo ("+id+")[" + Seq(wfa, wfb, env.wf).mkString(",") + "]" + "(bridge " + bridgeStoreId.takeRight(5).mkString +")"
 
-  def source = ins.collect(isALoad).headOption
+  lazy val source = ins.collect(isALoad).headOption
 
-  lazy val bridgeStore = BridgeStore(bridgeStoreId, wf)
-  def updateSinks(f: Seq[Sink] => Seq[Sink]) = copy(sinks = f(sinks))
+  def updateSinks(f: Seq[Sink] => Seq[Sink]) = copy(nodeSinks = f(nodeSinks))
 
   /** Use this ParallelDo as a Mapper */
-  def map(value: Any, emitter: EmitterWriter)(implicit sc: ScoobiConfiguration) {
-    dofn.setupFunction(environment)
+  def map(environment: Any, value: Any, emitter: EmitterWriter) {
     dofn.processFunction(environment, value, emitter)
-    dofn.cleanupFunction(environment, emitter)
   }
 
   /** Use this ParallelDo as a Reducer */
   /** setup this parallel do computation */
-  def setup(implicit sc: ScoobiConfiguration) {
+  def setup(environment: Any)(implicit sc: ScoobiConfiguration) {
     dofn.setupFunction(environment)
   }
   /** reduce key and values */
-  def reduce(key: Any, values: Any, emitter: EmitterWriter)(implicit sc: ScoobiConfiguration) {
-    dofn.processFunction(environment, (key, values), emitter)
+  def reduce(environment: Any, key: Any, values: Any, emitter: EmitterWriter)(implicit sc: ScoobiConfiguration) {
+    map(environment, (key, values), emitter)
   }
   /** cleanup */
-  def cleanup(emitter: EmitterWriter)(implicit sc: ScoobiConfiguration) {
+  def cleanup(environment: Any, emitter: EmitterWriter)(implicit sc: ScoobiConfiguration) {
     dofn.cleanupFunction(environment, emitter)
   }
 
   /** @return the environment object stored within the env node */
-  private def environment(implicit sc: ScoobiConfiguration) = env.environment(sc).pull(sc.configuration)
+  def environment(implicit sc: ScoobiConfiguration) = env.environment(sc).pull(sc.configuration)
 
   /** push a computed result to the distributed cache for the parallelDo environment */
   def pushEnv(result: Any)(implicit sc: ScoobiConfiguration) {
@@ -113,10 +119,10 @@ object ParallelDo {
     def fuseEnv(fExp: CompNode, gExp: CompNode): ValueNode =
       Op(fExp, gExp, (f: Any, g: Any) => (f, g), pair(pd1.wfe, pd2.wfe))
 
-    // create a new ParallelDo node fusing functions and environments */
+    // create a new ParallelDo node fusing functions and environments
     new ParallelDo(pd1.ins, fuseEnv(pd1.env, pd2.env), fuseDoFunction(pd1.dofn, pd2.dofn),
                    pd1.wfa, pd2.wfb,
-                   pd1.sinks ++ pd2.sinks,
+                   pd2.nodeSinks,
                    pd2.bridgeStoreId)
   }
 
@@ -136,16 +142,15 @@ object ParallelDo1 {
  * function to the values of an existing key-values CompNode
  */
 case class Combine(in: CompNode, f: (Any, Any) => Any,
-                          wfk:   WireReaderWriter,
-                          wfv:   WireReaderWriter,
-                          sinks:              Seq[Sink] = Seq(),
-                          bridgeStoreId:      String = randomUUID.toString) extends ProcessNode {
+                   wfk:   WireReaderWriter,
+                   wfv:   WireReaderWriter,
+                   nodeSinks:     Seq[Sink] = Seq(),
+                   bridgeStoreId: String = randomUUID.toString) extends ProcessNode {
 
   lazy val wf = pair(wfk, wfv)
   override val toString = "Combine ("+id+")["+Seq(wfk, wfv).mkString(",")+"]"
 
-  lazy val bridgeStore = BridgeStore(bridgeStoreId, wf)
-  def updateSinks(f: Seq[Sink] => Seq[Sink]) = copy(sinks = f(sinks))
+  def updateSinks(f: Seq[Sink] => Seq[Sink]) = copy(nodeSinks = f(nodeSinks))
 
   /** combine values: this is used in a Reducer */
   def combine(values: Iterable[Any]) = values.reduce(f)
@@ -170,13 +175,12 @@ object Combine1 {
  * key-value CompNode by key
  */
 case class GroupByKey(in: CompNode, wfk: WireReaderWriter, gpk: KeyGrouping, wfv: WireReaderWriter,
-                      sinks: Seq[Sink] = Seq(), bridgeStoreId: String = randomUUID.toString) extends ProcessNode {
+                      nodeSinks: Seq[Sink] = Seq(), bridgeStoreId: String = randomUUID.toString) extends ProcessNode {
 
   lazy val wf = pair(wfk, iterable(wfv))
   override val toString = "GroupByKey ("+id+")["+Seq(wfk, wfv).mkString(",")+"]"
 
-  lazy val bridgeStore = BridgeStore(bridgeStoreId, wf)
-  def updateSinks(f: Seq[Sink] => Seq[Sink]) = copy(sinks = f(sinks))
+  def updateSinks(f: Seq[Sink] => Seq[Sink]) = copy(nodeSinks = f(nodeSinks))
 }
 object GroupByKey1 {
   def unapply(gbk: GroupByKey): Option[CompNode] = Some(gbk.in)
@@ -244,7 +248,7 @@ trait WithEnvironment {
 
   /** push a value for this environment. This serialises the value and distribute it in the file cache */
   def pushEnv(result: Any)(implicit sc: ScoobiConfiguration) {
-    environment(sc).push(result)(sc.conf)
+    environment(sc).push(result)(sc.configuration)
   }
 }
 

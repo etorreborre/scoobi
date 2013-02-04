@@ -3,7 +3,7 @@ package acceptance
 
 import impl.plan.comp._
 import testing.mutable.NictaSimpleJobs
-import application.ScoobiConfiguration
+import impl.ScoobiConfiguration
 import core.DList
 import impl.plan.DListImpl
 
@@ -13,7 +13,7 @@ class RandomDListsSpec extends NictaSimpleJobs with CompNodeData {
   }.set(minTestsOk -> 20)
 
   def compareExecutions(l1: DList[String]) = {
-    val locally  = l1.run(configureForLocal(ScoobiConfiguration()))
+    val locally  = duplicate(l1).run(configureForLocal(ScoobiConfiguration()))
     val inMemory = duplicate(l1).run(configureForInMemory(ScoobiConfiguration()))
 
     locally aka "the local hadoop results" must haveTheSameElementsAs(inMemory)
@@ -22,8 +22,9 @@ class RandomDListsSpec extends NictaSimpleJobs with CompNodeData {
   }
 
   // this duplicate is to avoid some yet unexplained undue failures when running the tests
-  def duplicate(list: DList[String]) =
-    new DListImpl[String](Optimiser.duplicate(list.getComp).asInstanceOf[ProcessNode])(list.wf)
+  def duplicate(list: DList[String]) = {
+    new DListImpl[String](Optimiser.reinitAttributable(Optimiser.duplicate(list.getComp).asInstanceOf[ProcessNode]))(list.wf)
+  }
 
 }
 

@@ -1,15 +1,14 @@
 package com.nicta.scoobi
 package core
 
-import org.apache.hadoop.mapreduce.OutputFormat
-import org.apache.hadoop.mapreduce.Job
+import org.apache.hadoop.mapreduce._
 import org.apache.hadoop.io.compress.{GzipCodec, CompressionCodec}
 import org.apache.hadoop.io.SequenceFile.CompressionType
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat
-import org.apache.hadoop.mapreduce.RecordWriter
-import org.apache.hadoop.fs.Path
+import org.apache.hadoop.fs._
 import org.apache.hadoop.conf.Configuration
 import Data._
+import io.text.TextInput
 
 /**
  * An output store from a MapReduce job
@@ -39,6 +38,8 @@ trait DataSink[K, V, B] extends Sink { outer =>
       configuration.setClass("mapred.output.compression.codec", codec.getClass, classOf[CompressionCodec])
       this
     }
+
+    override def toSource: Option[Source] = outer.toSource
   }
 
   /** configure the compression for a given job */
@@ -51,7 +52,7 @@ trait DataSink[K, V, B] extends Sink { outer =>
   }
 
   def outputPath(implicit sc: ScoobiConfiguration) = {
-    val jobCopy = new Job(sc.conf)
+    val jobCopy = new Job(sc.configuration)
     outputConfigure(jobCopy)
     Option(FileOutputFormat.getOutputPath(jobCopy))
   }
@@ -69,7 +70,7 @@ trait DataSink[K, V, B] extends Sink { outer =>
  * Internal untyped definition of a Sink to store result data
  */
 private[scoobi]
-trait Sink {
+trait Sink { outer =>
   /** unique id for this Sink */
   def id: Int
   /** The OutputFormat specifying the type of output for this DataSink. */
@@ -102,6 +103,9 @@ trait Sink {
   /** write values to this sink, using a specific record writer */
   private [scoobi]
   def write(values: Seq[_], recordWriter: RecordWriter[_,_])
+
+  /** implement this function if this sink can be turned into a Source */
+  def toSource: Option[Source] = None
 }
 
 object Data {
@@ -128,6 +132,36 @@ private[scoobi]
 trait Bridge extends Source with Sink {
   def bridgeStoreId: String
   def readAsIterable(implicit sc: ScoobiConfiguration): Iterable[_]
+}
+
+object Bridge {
+  def create(source: Source, sink: Sink, bridgeId: String): Bridge = new Bridge {
+    def bridgeStoreId = bridgeId
+    override def id = sink.id
+
+    def inputFormat = source.inputFormat
+    def inputCheck(implicit sc: ScoobiConfiguration) { source.inputCheck }
+    def inputConfigure(job: Job)(implicit sc: ScoobiConfiguration) { source.inputConfigure(job) }
+    def inputSize(implicit sc: ScoobiConfiguration) = source.inputSize
+    def fromKeyValueConverter = source.fromKeyValueConverter
+    private[scoobi] def read(reader: RecordReader[_,_], mapContext: InputOutputContext, read: Any => Unit) { source.read(reader, mapContext, read) }
+
+    def outputFormat = sink.outputFormat
+    def outputKeyClass = sink.outputKeyClass
+    def outputValueClass = sink.outputValueClass
+    def outputConverter = sink.outputConverter
+    def outputCheck(implicit sc: ScoobiConfiguration) { sink.outputCheck }
+    def outputConfigure(job: Job)(implicit sc: ScoobiConfiguration) { sink.outputConfigure(job) }
+    def outputPath(implicit sc: ScoobiConfiguration) = sink.outputPath
+    def outputCompression(codec: CompressionCodec, compressionType: CompressionType = CompressionType.BLOCK) = sink.outputCompression(codec, compressionType)
+    def configureCompression(configuration: Configuration) = sink.configureCompression(configuration)
+    private[scoobi] def isCompressed = sink.isCompressed
+    private [scoobi] def write(values: Seq[_], recordWriter: RecordWriter[_,_]) { sink.write(values, recordWriter) }
+    override def toSource: Option[Source] = Some(source)
+
+    def readAsIterable(implicit sc: ScoobiConfiguration) =
+      new Iterable[Any] { def iterator = Source.read(source, (a: Any) => a).iterator }
+  }
 }
 
 

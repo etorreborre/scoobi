@@ -7,7 +7,6 @@ import java.net.URL
 import java.io.File
 import mapreducer.Env
 import org.apache.hadoop.fs.Path
-import org.apache.hadoop.fs.FileSystem
 import org.apache.hadoop.util.GenericOptionsParser
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.mapred.JobConf
@@ -23,7 +22,7 @@ import FileSystems._
 import monitor.Loggable._
 import org.apache.hadoop.mapreduce.Job
 
-case class ScoobiConfigurationImpl(configuration: Configuration = new Configuration,
+case class ScoobiConfigurationImpl(private val hadoopConfiguration: Configuration = new Configuration,
                                    var userJars: Set[String] = Set(),
                                    var userDirs: Set[String] = Set()) extends ScoobiConfiguration {
 
@@ -37,12 +36,43 @@ case class ScoobiConfigurationImpl(configuration: Configuration = new Configurat
 
   private implicit lazy val logger = getLog("scoobi.ScoobiConfiguration")
 
+
+  /** Scoobi's configuration, initialised with a job id */
+  lazy val configuration = {
+    hadoopConfiguration.set(JOB_ID, jobId)
+    hadoopConfiguration.setInt(PROGRESS_TIME, 500)
+    // this setting avoids unnecessary warnings
+    hadoopConfiguration.set("mapred.used.genericoptionsparser", "true")
+    hadoopConfiguration
+  }
+
+  /**
+   * @return the job name if one is defined
+   */
+  def jobName: Option[String] = Option(hadoopConfiguration.get(JOB_NAME))
+
+  /* Timestamp used to mark each Scoobi working directory. */
+  private lazy val timestamp = {
+    val now = new Date
+    val sdf = new SimpleDateFormat("yyyyMMdd-HHmmss")
+    hadoopConfiguration.getOrSet(JOB_TIMESTAMP, sdf.format(now))
+  }
+
+  /** The id for the current Scoobi job being (or about to be) executed. */
+  def jobId: String = (Seq("scoobi", timestamp) ++ jobName :+ uniqueId).mkString("-")
+
+  /** The job name for a step in the current Scoobi, i.e. a single MapReduce job */
+  def jobStep(mscrId: Int) = {
+    configuration.set(JOB_STEP, jobId + "(Mscr-" + mscrId + ")")
+    configuration.set(JobConf.MAPRED_LOCAL_DIR_PROPERTY, workingDir+configuration.get(JOB_STEP))
+    configuration.get(JOB_STEP).debug("the job step is")
+  }
   /**Parse the generic Hadoop command line arguments, and call the user code with the remaining arguments */
   def withHadoopArgs(args: Array[String])(f: Array[String] => Unit): ScoobiConfiguration = callWithHadoopArgs(args, f)
 
   /** Helper method that parses the generic Hadoop command line arguments before
     * calling the user's code with the remaining arguments. */
-  private def callWithHadoopArgs(args: Array[String], f: Array[String] => Unit): ScoobiConfiguration = {
+  private[scoobi] def callWithHadoopArgs(args: Array[String], f: Array[String] => Unit): ScoobiConfiguration = {
     /* Parse options then update current configuration. Because the filesystem
      * property may have changed, also update working directory property. */
     val parser = new GenericOptionsParser(configuration, args)
@@ -125,6 +155,12 @@ case class ScoobiConfigurationImpl(configuration: Configuration = new Configurat
   /** @return the current mode */
   def mode = Mode.withName(configuration.get(SCOOBI_MODE, Mode.Local.toString))
 
+  /** @return true if the mscr jobs can be executed concurrently */
+  def concurrentJobs = hadoopConfiguration.getOrSetBoolean(CONCURRENT_JOBS, true)
+
+  /** set to true if the mscr jobs must be executed concurrently */
+  def setConcurrentJobs(concurrent: Boolean) = { hadoopConfiguration.setBoolean(CONCURRENT_JOBS, concurrent); this }
+
   /**
    * @return true if the dependent jars have been uploaded
    */
@@ -173,41 +209,8 @@ case class ScoobiConfigurationImpl(configuration: Configuration = new Configurat
     set(JOB_NAME, name)
   }
 
-  /**
-   * the file system for this configuration
-   */
-  lazy val fs = FileSystem.get(configuration)
-
-  /**
-   * @return the job name if one is defined
-   */
-  def jobName: Option[String] = Option(configuration.get(JOB_NAME))
-
-  /* Timestamp used to mark each Scoobi working directory. */
-  private def timestamp = {
-    val now = new Date
-    val sdf = new SimpleDateFormat("yyyyMMdd-HHmmss")
-    sdf.format(now)
-  }
-
-  /** The id for the current Scoobi job being (or about to be) executed. */
-  lazy val jobId: String = (Seq("scoobi", timestamp) ++ jobName :+ uniqueId).mkString("-").debug("the job id is")
-
-  /** The job name for a step in the current Scoobi, i.e. a single MapReduce job */
-  def jobStep(mscrId: Int) = {
-    conf.set(JOB_STEP, jobId + "(Step-" + mscrId + ")")
-    conf.set(JobConf.MAPRED_LOCAL_DIR_PROPERTY, workingDir+conf.get(JOB_STEP))
-    conf.get(JOB_STEP)
-  }
-
-  /**Scoobi's configuration. */
-  lazy val conf = {
-    configuration.set(JOB_ID, jobId)
-    configuration.setInt(PROGRESS_TIME, 500)
-    // this setting avoids unnecessary warnings
-    configuration.set("mapred.used.genericoptionsparser", "true")
-    configuration
-  }
+  /** @return the file system for this configuration, either a local or a remote one */
+  def fileSystem = FileSystems.fileSystem(this)
 
   /**
    * force a configuration to be an in-memory one, currently doing everything as in the local mode
@@ -242,7 +245,7 @@ case class ScoobiConfigurationImpl(configuration: Configuration = new Configurat
   }
 
   /** @return a pseudo-random unique id */
-  private def uniqueId = java.util.UUID.randomUUID
+  private lazy val uniqueId = hadoopConfiguration.getOrSet(JOB_UNIQUEID, java.util.UUID.randomUUID.toString)
 
   /** set a value on the configuration */
   def set(key: String, value: Any) {
@@ -256,15 +259,13 @@ case class ScoobiConfigurationImpl(configuration: Configuration = new Configurat
   lazy val workingDir                     = configuration.getOrSet("scoobi.workingdir", dirPath(scoobiDir + jobId))
   lazy val scoobiDirectory: Path          = new Path(scoobiDir)
   lazy val workingDirectory: Path         = new Path(workingDir)
-  def temporaryOutputDirectory(job: Job)  = new Path(workingDirectory, "tmp-out-"+jobId)
+  def temporaryOutputDirectory(job: Job)  = new Path(workingDirectory, "tmp-out-"+hadoopConfiguration.get(JOB_STEP))
   lazy val temporaryJarFile: File         = File.createTempFile("scoobi-job-"+jobId, ".jar")
 
-  def deleteScoobiDirectory          = fs.delete(scoobiDirectory, true)
-  def deleteWorkingDirectory         = fs.delete(workingDirectory, true)
-  def deleteTemporaryOutputDirectory(job: Job) = fs.delete(temporaryOutputDirectory(job), true)
+  def deleteScoobiDirectory          = fileSystem.delete(scoobiDirectory, true)
+  def deleteWorkingDirectory         = fileSystem.delete(workingDirectory, true)
+  def deleteTemporaryOutputDirectory(job: Job) = fileSystem.delete(temporaryOutputDirectory(job), true)
 
-  /** @return the file system for this configuration, either a local or a remote one */
-  def fileSystem = FileSystems.fileSystem(this)
   /** @return a new environment object */
   def newEnv(wf: WireReaderWriter): Environment = Env(wf)(this)
 
@@ -274,20 +275,13 @@ case class ScoobiConfigurationImpl(configuration: Configuration = new Configurat
   def persist[A](o: DObject[A]): A       = persister.persist(o)
 
   def duplicate = {
-    val c = new Configuration(conf)
+    val c = new Configuration(configuration)
     ScoobiConfigurationImpl(c).addUserDirs(userDirs.toSeq).addJars(userJars.toSeq)
   }
 }
 
 object ScoobiConfigurationImpl {
-  implicit def toExtendedConfiguration(sc: ScoobiConfiguration): ExtendedConfiguration = extendConfiguration(sc.conf)
-
-  implicit def toHadoopConfiguration(sc: ScoobiConfiguration): Configuration = sc.conf
-
-  implicit def fromHadoopConfiguration(implicit conf: Configuration): ScoobiConfigurationImpl = new ScoobiConfigurationImpl(conf)
-
-  def apply(args: Array[String]): ScoobiConfiguration =
-    ScoobiConfigurationImpl(new Configuration()).callWithHadoopArgs(args, (a: Array[String]) => ())
+  implicit def toExtendedConfiguration(sc: ScoobiConfiguration): ExtendedConfiguration = extendConfiguration(sc.configuration)
 
   // only used in tests
   private[scoobi] def unitEnv(configuration: Configuration) =
@@ -298,4 +292,14 @@ object ScoobiConfigurationImpl {
       }
     }
 }
+
+trait ScoobiConfigurations {
+  implicit def toConfiguration(sc: ScoobiConfiguration): Configuration = sc.configuration
+  implicit def fromConfiguration(c: Configuration): ScoobiConfiguration = ScoobiConfigurationImpl(c)
+  def apply(configuration: Configuration) = new ScoobiConfigurationImpl(configuration)
+  def apply() = new ScoobiConfigurationImpl(new Configuration)
+  def apply(args: Array[String]): ScoobiConfiguration =
+    ScoobiConfigurationImpl(new Configuration()).callWithHadoopArgs(args, (a: Array[String]) => ())
+}
+object ScoobiConfiguration extends ScoobiConfigurations
 

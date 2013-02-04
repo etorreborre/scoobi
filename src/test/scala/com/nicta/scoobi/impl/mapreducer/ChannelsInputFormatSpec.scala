@@ -28,8 +28,11 @@ import com.nicta.scoobi.io._
 import testing.mutable.UnitSpecification
 import com.nicta.scoobi.impl.rtt._
 import Configurations._
-import application.ScoobiConfiguration
+import impl.ScoobiConfiguration
 import WireFormat._
+import rtt.RuntimeClass
+import org.apache.hadoop.filecache.DistributedCache
+import testing.TestFiles
 
 class ChannelsInputFormatSpec extends UnitSpecification with Mockito {
                                                                         """
@@ -37,10 +40,10 @@ Several input formats can be grouped as one `ChannelsInputFormat` class.""".endp
 
   "Each input format can be configured as an input channel on a job's configuration" >> {
     implicit val sc = ScoobiConfiguration().setAsLocal
-    val job = new Job(sc.conf, "id")
+    val job = new Job(sc.configuration, "id")
     val jarBuilder = mock[JarBuilder]
 
-    val (source1, source2) = (ConstantStringDataSource("one"), aBridgeStore)
+    val (source1, source2) = (stringDataSource("one"), aBridgeStore)
     val configuration = configureSources(job, jarBuilder, Seq(source1, source2)).toMap.
                           showAs(_.toList.sorted.filter(_._1.startsWith("scoobi")).mkString("\n")).evaluate
 
@@ -79,7 +82,7 @@ Several input formats can be grouped as one `ChannelsInputFormat` class.""".endp
 
     def jobContextFor(sources: DataSource[_,_,_]*) = {
       implicit val sc = ScoobiConfiguration()
-      val job = new Job(sc, "id")
+      val job = new Job(sc.configuration, "id")
       val jarBuilder = mock[JarBuilder]
       val configuration = configureSources(job, jarBuilder, Seq(sources:_*))
       new JobContextImpl(configuration, new JobID)
@@ -87,6 +90,14 @@ Several input formats can be grouped as one `ChannelsInputFormat` class.""".endp
   }
 
   lazy val aBridgeStore = BridgeStore[String]("id", wireFormat[String])
+
+  def stringDataSource(string: String) =  new ConstantStringDataSource(string) {
+    override def inputConfigure(job: Job)(implicit sc: ScoobiConfiguration) {
+      super.inputConfigure(job)
+      val file = TestFiles.createTempFile("cache")
+      DistributedCache.addCacheFile(file.toURI, job.getConfiguration)
+    }
+  }
 
   def scoobiArgs = Seq[String]()
 }

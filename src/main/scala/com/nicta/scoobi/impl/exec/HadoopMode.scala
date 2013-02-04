@@ -11,6 +11,9 @@ import collection.Seqs._
 import scalaz.{DList => _, _}
 import concurrent.Promise
 import Scalaz._
+import org.apache.hadoop.mapreduce.Job
+import control.Exceptions._
+
 /**
  * Execution of Scoobi applications using Hadoop
  *
@@ -22,7 +25,7 @@ import Scalaz._
  *  - executing each layer in sequence
  */
 private[scoobi]
-case class HadoopMode(sc: ScoobiConfiguration) extends Optimiser with MscrsDefinition with ShowNode {
+case class HadoopMode(sc: ScoobiConfiguration) extends Optimiser with MscrsDefinition with ShowNode with ExecutionMode {
   implicit lazy val logger = LogFactory.getLog("scoobi.HadoopMode")
 
   /** execute a DList, storing the results in DataSinks */
@@ -37,87 +40,105 @@ case class HadoopMode(sc: ScoobiConfiguration) extends Optimiser with MscrsDefin
    */
   private
   lazy val prepare: CompNode => CompNode = attr("prepare") { case node =>
-    optimise(node.debug("Raw nodes", prettyGraph)).debug("Optimised nodes", prettyGraph)
+    val toExecute = truncateAlreadyExecutedNodes(node.debug("Raw nodes", prettyGraph))
+    checkSourceAndSinks(toExecute)(sc)
+    val optimised = optimise(toExecute.debug("Active nodes", prettyGraph))
+    optimised.debug("Optimised nodes", prettyGraph)
   }
+
+  private def truncateAlreadyExecutedNodes(node: CompNode) =
+    truncate(node) {
+      case process: ProcessNode => process.bridgeStore.map(hasBeenFilled).getOrElse(false)
+      case other                => false
+    }
 
   /**
    * execute a computation node
    */
   private
   lazy val executeNode: CompNode => Any = {
+    /** return the result of the last layer */
     def executeLayers(node: CompNode) {
       layers(node).debug("Executing layers", mkStrings).map(executeLayer)
     }
     // execute value nodes recursively, other nodes start a "layer" execution
     attr("executeNode") {
-      case node @ Op1(in1, in2)    => node.execute(executeNode(in1), executeNode(in2)).debug("result for op "+node.id+": ")
+      case node @ Op1(in1, in2)    => node.execute(executeNode(in1), executeNode(in2))
       case node @ Return1(in)      => in
-      case node @ Materialise1(in) => executeLayers(node); read(in.bridgeStore)
+      case node @ Materialise1(in) => executeLayers(node); in.bridgeStore.map(read).getOrElse(Seq())
       case node                    => executeLayers(node)
     }
   }
 
-  private lazy val executeLayer: Layer[T] => Any =
-    attr("executeLayer") { case layer => Execution(layer).execute }
+  private lazy val executeLayer: Layer[T] => Unit =
+    attr("executeLayer") { case layer =>
+      ("executing layer "+layer.id).debug
+      Execution(layer).execute
+    }
 
   /**
    * Execution of a "layer" of Mscrs
    */
   private case class Execution(layer: Layer[T]) {
 
-    def execute: Seq[Any] = {
-      if (layerBridgesAreFilled) debug("Skipping layer\n"+layer.id+" because all sinks have been filled")
-      else                       executeMscrs(mscrs(layer)).debug("Executing layer\n"+layer)
+    def execute {
+      ("Executing layer\n"+layer).debug
+      runMscrs(mscrs(layer))
 
-      layerBridges(layer).foreach(markBridgeAsFilled)
-      layerBridges(layer).debug("Layer bridges: ").map(read).toSeq
+      layerBridgeSinks(layer).debug("Layer bridges sinks: ").foreach(markBridgeAsFilled)
+      ("===== END OF LAYER "+layer.id+" ======").debug
     }
 
-    /** execute mscrs concurrently if there are more than one */
-    private def executeMscrs(mscrs: Seq[Mscr]): Unit =
-      if (mscrs.size <= 1) mscrs.foreach(executeMscr)
-      else                 mscrs.toList.map(m => Promise(executeMscr(m))).sequence.get
+    /**
+     * run mscrs concurrently if there are more than one.
+     *
+     * Only the execution part is done concurrently, not the configuration.
+     * This is to make sure that there is not undesirable race condition during the setting up of variables
+     */
+    private def runMscrs(mscrs: Seq[Mscr]) {
+      ("executing mscrs"+mscrs.mkString("\n", "\n", "\n")).debug
 
-    /** @return true if the layer has bridges are they're all already filled by previous computations */
-    private def layerBridgesAreFilled = layerBridges(layer).nonEmpty && layerBridges(layer).forall(hasBeenFilled)
+      val configured = mscrs.toList.map(configureMscr)
+      val executed = if (sc.concurrentJobs) configured.map(executeMscr).sequence.get
+                     else                   configured.map(_.execute)
+      executed.map(reportMscr)
+    }
 
-    /** execute a Mscr */
-    private def executeMscr = (mscr: Mscr) => {
+    /** configure a Mscr */
+    private def configureMscr = (mscr: Mscr) => {
       implicit val mscrConfiguration = sc.duplicate
 
-      if (mscr.bridges.nonEmpty && mscr.bridges.forall(hasBeenFilled)) debug("Skipping Mscr\n"+mscr.id+" because all the sinks have been filled")
-      else {
-        debug("Executing Mscr\n"+mscr)
+      ("Loading input nodes for mscr "+mscr.id+"\n"+mscr.inputNodes.mkString("\n")).debug
+      mscr.inputNodes.foreach(load)
 
-        debug("Checking sources for mscr "+mscr.id+"\n"+mscr.sources.mkString("\n"))
-        mscr.sources.foreach(_.inputCheck)
+      ("Configuring mscr "+mscr.id+"\n"+mscr.inputNodes.mkString("\n")).debug
+      MapReduceJob(mscr, layer.id).configure
+    }
 
-        debug("Checking the outputs for mscr "+mscr.id+"\n"+mscr.sinks.mkString("\n"))
-        mscr.sinks.foreach(_.outputCheck)
+    /** execute a Mscr */
+    protected def executeMscr = (job: MapReduceJob) => {
+      Promise(tryOr(job.execute)((e: Exception) => { e.printStackTrace; job }))
+    }
 
-        debug("Loading input nodes for mscr "+mscr.id+"\n"+mscr.inputNodes.mkString("\n"))
-        mscr.inputNodes.foreach(load)
-
-        MapReduceJob(mscr).run
-      }
+    /** report the execution of a Mscr */
+    protected def reportMscr = (job: MapReduceJob) => {
+      job.report
+      ("===== END OF MSCR "+job.mscr.id+" ======").debug
     }
   }
 
-  /** mark a bridge as filled so it doesn't have to be recomputed */
-  private def markBridgeAsFilled = (b: Bridge) => filledBridge(b.bridgeStoreId)
-  /** this attributes store the fact that a Bridge has received data */
-  private lazy val filledBridge: CachedAttribute[String, String] = attr("filled bridge")(identity)
-  /** @return true if a given Bridge has already received data */
-  private def hasBeenFilled(b: Bridge)= filledBridge.hasBeenComputedAt(b.bridgeStoreId)
   /** @return the content of a Bridge as an Iterable */
-  private lazy val read: Bridge => Any = attr("read") { case bs => bs.readAsIterable(sc) }
+  private def read(bs: Bridge): Any = {
+    ("reading bridge "+bs.bridgeStoreId).debug
+    Vector(bs.readAsIterable(sc).toSeq:_*)
+  }
 
   /** make sure that all inputs environments are fully loaded */
   private def load(node: CompNode)(implicit sc: ScoobiConfiguration): Any = {
     node match {
       case rt @ Return1(in)      => pushEnv(rt, in)
-      case op @ Op1(in1, in2)    => pushEnv(op, op.execute(load(in1), load(in2)).debug("result for op "+op.id+": "))
-      case mt @ Materialise1(in) => pushEnv(mt, read(in.bridgeStore))
+      case op @ Op1(in1, in2)    => pushEnv(op, op.execute(load(in1), load(in2)))
+      case mt @ Materialise1(in) => in.bridgeStore.map(bs => pushEnv(mt, read(bs))).getOrElse(Seq())
       case other                 => ()
     }
   }

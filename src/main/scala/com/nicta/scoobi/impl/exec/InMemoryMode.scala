@@ -5,7 +5,6 @@ package exec
 import org.apache.commons.logging.LogFactory
 import org.apache.hadoop.mapreduce.Job
 import org.apache.hadoop.mapreduce.TaskAttemptID
-import org.apache.hadoop.mapreduce.task.MapContextImpl
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.mapreduce.task.TaskAttemptContextImpl
 import scala.collection.immutable.VectorBuilder
@@ -16,14 +15,14 @@ import monitor.Loggable._
 import impl.plan._
 import comp._
 import ScoobiConfigurationImpl._
-import org.apache.hadoop.mapreduce.RecordReader
+import ScoobiConfiguration._
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat
 import scalaz.Scalaz._
 
 /**
  * A fast local mode for execution of Scoobi applications.
  */
-case class InMemoryMode() extends ShowNode {
+case class InMemoryMode() extends ShowNode with ExecutionMode {
 
   implicit lazy val logger = LogFactory.getLog("scoobi.InMemoryMode")
 
@@ -37,17 +36,9 @@ case class InMemoryMode() extends ShowNode {
 
   def execute(node: CompNode)(implicit sc: ScoobiConfiguration): Any = {
     initAttributable(node).debug("nodes\n", prettyGraph)
-
-    node -> prepare(sc)
+    checkSourceAndSinks(node)
     node -> computeValue(sc)
   }
-
-  private
-  lazy val prepare: ScoobiConfiguration => CompNode => Unit =
-    paramAttr("prepare") { sc: ScoobiConfiguration => { node: CompNode =>
-      node match { case n: ProcessNode => n.sinks.foreach(_.outputCheck(sc)); case _ => () }
-      children(node).foreach(_ -> prepare(sc))
-    }}
 
   private
   lazy val computeValue: ScoobiConfiguration => CompNode => Any =
@@ -71,31 +62,8 @@ case class InMemoryMode() extends ShowNode {
       }
     }
 
-  private def computeLoad(load: Load)(implicit sc: ScoobiConfiguration): Seq[_] = {
-
-    val vb = new VectorBuilder[Any]()
-    val job = new Job(new Configuration(sc))
-    val source = load.source
-    val inputFormat = source.inputFormat.newInstance
-
-    job.setInputFormatClass(source.inputFormat)
-    source.inputConfigure(job)
-
-    inputFormat.getSplits(job) foreach { split =>
-      val tid = new TaskAttemptID()
-      val taskContext = new TaskAttemptContextImpl(job.getConfiguration, tid)
-      val rr = inputFormat.createRecordReader(split, taskContext).asInstanceOf[RecordReader[Any, Any]]
-      val mapContext = InputOutputContext(new MapContextImpl(job.getConfiguration, tid, rr, null, null, null, split))
-
-      rr.initialize(split, taskContext)
-
-      source.read(rr, mapContext, (a: Any) => vb += WireReaderWriter.wireReaderWriterCopy(a)(load.wf))
-      rr.close()
-    }
-
-    vb.result.debug("computeLoad")
-  }
-
+  private def computeLoad(load: Load)(implicit sc: ScoobiConfiguration): Seq[_] =
+    Source.read(load.source, (a: Any) => WireReaderWriter.wireReaderWriterCopy(a)(load.wf)).debug("computeLoad")
 
   private def computeParallelDo(pd: ParallelDo)(implicit sc: ScoobiConfiguration): Seq[_] = {
     val vb = new VectorBuilder[Any]()
@@ -168,7 +136,7 @@ case class InMemoryMode() extends ShowNode {
     sinks.foreach { sink =>
       val job = new Job(new Configuration(sc))
 
-      val outputFormat = sink.outputFormat.newInstance()
+      val outputFormat = sink.outputFormat.newInstance
 
       FileOutputFormat.setOutputPath(job, sc.temporaryOutputDirectory(job))
       job.setOutputFormatClass(sink.outputFormat)

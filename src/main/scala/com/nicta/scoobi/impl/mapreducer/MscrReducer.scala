@@ -39,16 +39,15 @@ class MscrReducer extends HReducer[TaggedKey, TaggedValue, Any, Any] {
     channelOutput = new ChannelOutputFormat(context)
 
     logger.info("Starting on " + java.net.InetAddress.getLocalHost.getHostName)
-    outputChannels.setup(context.getConfiguration)
+    outputChannels.setup(channelOutput)(context.getConfiguration)
   }
 
   override def reduce(key: TaggedKey, values: java.lang.Iterable[TaggedValue], context: HReducer[TaggedKey, TaggedValue, Any, Any]#Context) {
-
     /* Get the right output value type and output directory for the current channel,
      * specified by the key's tag. */
     outputChannels.channel(key.tag) foreach { channel =>
     /* Convert java.util.Iterable[TaggedValue] to Iterable[V2]. */
-      val untaggedValues = new UntaggedValues(key.tag, values)
+      val untaggedValues = new UntaggedValues(key.tag, new java.lang.Iterable[TaggedValue] { def iterator = values.iterator })
       channel.reduce(key.get(key.tag), untaggedValues, channelOutput)(context.getConfiguration)
     }
   }

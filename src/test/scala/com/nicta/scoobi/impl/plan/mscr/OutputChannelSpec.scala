@@ -52,8 +52,8 @@ class OutputChannelSpec extends UnitSpecification with org.specs2.specification.
   "sinks" - new g2 with factory {
     val (gbk1, gbk2) = (gbk(load), gbk(StringSink()))
 
-    e1 := GbkOutputChannel(gbk1).sinks === Seq(gbk1.bridgeStore)
-    e2 := GbkOutputChannel(gbk2).sinks === Seq(gbk2.bridgeStore, StringSink())
+    e1 := GbkOutputChannel(gbk1).sinks === gbk1.bridgeStore.toSeq
+    e2 := GbkOutputChannel(gbk2).sinks === (gbk2.bridgeStore.toSeq :+ StringSink())
   }
 
   "processing" - new g3 with factory {
@@ -90,14 +90,16 @@ class OutputChannelSpec extends UnitSpecification with org.specs2.specification.
       case other  => ("nokey", other)
     }
 
-    def reduce(key: Any, values: Iterable[Any]): Seq[Any] = {
-      val outputFormat = new ChannelOutputFormat(null) {
-        val keyValues = new ListBuffer[Any]
-        override def write[K, V](tag: Int, sinkId: Int, kv: (K, V)) {
-          keyValues.append((kv._1, kv._2))
-        }
-        override def close() { }
+    lazy val outputFormat = new ChannelOutputFormat(null) {
+      val keyValues = new ListBuffer[Any]
+      override def write[K, V](tag: Int, sinkId: Int, kv: (K, V)) {
+        keyValues.append((kv._1, kv._2))
       }
+      override def close() { }
+    }
+    setup(outputFormat)(new Configuration)
+
+    def reduce(key: Any, values: Iterable[Any]): Seq[Any] = {
       outer.reduce(key, values, outputFormat)(new Configuration)
       outputFormat.keyValues.toList
     }

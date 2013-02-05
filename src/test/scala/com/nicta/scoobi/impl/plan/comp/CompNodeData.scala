@@ -38,7 +38,7 @@ trait CompNodeData extends Data with ScalaCheckMatchers with CommandLineArgument
   implicit lazy val arbitraryDObject:  Arbitrary[DObject[String]] = Arbitrary(Gen.sized(depth => genObject(depth)))
 
   implicit lazy val groupByKey: Arbitrary[GroupByKey] =
-    error("") // Arbitrary(arbitraryDList.arbitrary.map(_.map(_.partition(_ > 'a')).groupByKey.getComp.asInstanceOf[GroupByKey]))
+    Arbitrary(arbitraryDList.arbitrary.map(_.map(_.partition(_ > 'a')).groupByKey.list.getComp.asInstanceOf[GroupByKey]))
 
   /** lists of elements of any type */
   def genList(depth: Int = 1): Gen[DList[_]] = Gen.oneOf(genList1(depth), genList2(depth), genList3(depth))

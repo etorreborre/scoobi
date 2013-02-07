@@ -4,11 +4,10 @@ package plan
 package comp
 
 import testing.UnitSpecification
-import org.specs2.specification.Grouped
 import core.WireFormat._
 import Scoobi._
 
-class ProcessNodeSpec extends UnitSpecification with Grouped { def is =
+class ProcessNodeSpec extends UnitSpecification with org.specs2.specification.Grouped { def is =
 
   "A ProcessNode node represent the current state of a DList or DObject computation"               ^
                                                                                                    p^

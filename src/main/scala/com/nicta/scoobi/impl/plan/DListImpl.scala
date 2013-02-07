@@ -63,8 +63,6 @@ class DListImpl[A](comp: ProcessNode)(implicit val wf: WireFormat[A]) extends DL
 
   lazy val materialise: DObject[Iterable[A]] = new DObjectImpl(Materialise(comp, wireFormat[Iterable[A]]))
 
-  lazy val materialise1: DObject[Iterable1[A]] = new DObjectImpl(Materialise(comp, wireFormat[Iterable1[A]]))
-
   def parallelDo[B : WireFormat](dofn: DoFn[A, B]): DList[B] = parallelDo(UnitDObject.newInstance, dofn)
 
   override def toString = "\n"+ new ShowNode {}.pretty(comp)

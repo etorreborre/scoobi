@@ -87,14 +87,12 @@ sealed trait Grouped1[K, V] {
   def parallelDo[B : WireFormat](dofn: DoFn[Association1[K, V], B]): DList[B] =
     list parallelDo dofn
 
+  // todo DList1
   def combine(f: (V, V) => V)(implicit wk: WireFormat[K], wv: WireFormat[V]): DList[(K, V)] =
     list combine f
 
   def materialise: DObject[Iterable[Association1[K, V]]]  =
     list.materialise
-
-  def materialise1: DObject[Iterable1[Association1[K, V]]] =
-    list.materialise1
 
   def filter(p: Association1[K, V] => Boolean): Grouped1[K, V] =
     Grouped1(list filter p)

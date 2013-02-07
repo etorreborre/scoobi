@@ -75,7 +75,6 @@ trait DList[A] extends DataSinks with Persistent[Seq[A]] {
    * Turn a distributed list into a normal, non-distributed non-empty collection that can be accessed
    * by the client
    */
-  def materialise1: DObject[Iterable1[A]]
 
   // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   // Derived functionality (return DLists).
@@ -227,9 +226,10 @@ trait DList[A] extends DataSinks with Persistent[Seq[A]] {
       }
     })
 
-    /* Group all elements together (so they go to the same reducer task) and then
-     * combine them. */
-    imc.groupBy(_ => 0).combine(op).map(_._2).materialise1.map(_.head)
+    // todo return DList1 from Grouped1#combine
+    val h: DList[(Int, A)] = imc.groupBy(_ => 0).combine(op)
+    val x = h.map(_._2).materialise
+    x map (_.headOption getOrElse (sys.error("the reduce operation is called on an empty list")))
   }
 
   /**Multiply up the elements of this distribute list. */
